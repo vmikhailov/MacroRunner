@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.271
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MacroRunner", "MacroRunner\MacroRunner.csproj", "{CC7CFC68-D373-4960-BE58-4DE83B8B7C6E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacroRunner.Tests", "MacroRunner.Tests\MacroRunner.Tests.csproj", "{E3EBA9EB-72FA-4C35-97C4-F69C0FE9AB53}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CC7CFC68-D373-4960-BE58-4DE83B8B7C6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC7CFC68-D373-4960-BE58-4DE83B8B7C6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC7CFC68-D373-4960-BE58-4DE83B8B7C6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC7CFC68-D373-4960-BE58-4DE83B8B7C6E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3EBA9EB-72FA-4C35-97C4-F69C0FE9AB53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3EBA9EB-72FA-4C35-97C4-F69C0FE9AB53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3EBA9EB-72FA-4C35-97C4-F69C0FE9AB53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3EBA9EB-72FA-4C35-97C4-F69C0FE9AB53}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F89870AD-015F-4519-B034-02B1E2692FE8}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+    <Nullable>enable</Nullable>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Samples\Tests\*\*\*.vba" />
+    <EmbeddedResource Include="Samples\Axm\*\*\*.vba" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Compiler\Templates\FunctionTemplate.cshtml" />
+    <None Remove="Compiler\Templates\VbaClassTemplate.cshtml" />
+    <None Remove="Compiler\Templates\VbaModuleTemplate.cshtml" />
+    <None Remove="Samples\Tests\Test1.1\Classes\Globals.vba" />
+    <None Remove="Samples\Tests\Test1.1\Classes\TestClass.vba" />
+    <None Remove="Samples\Tests\Test1.1\Modules\Sample2.vba" />
+    <None Remove="Samples\Tests\Test1\Modules\Sample1.vba" />
+    <None Remove="Samples\Tests\Test3\Modules\Sample1.vba" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Compiler\Templates\FunctionTemplate.cshtml" />
+    <EmbeddedResource Include="Compiler\Templates\VbaClassTemplate.cshtml" />
+    <EmbeddedResource Include="Compiler\Templates\VbaModuleTemplate.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.94.2" />
+    <PackageReference Include="JetBrains.Annotations" Version="2018.3.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.10.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic" Version="2.10.0" />
+    <PackageReference Include="MoreLinq.Core" Version="1.4.0.1" />
+    <PackageReference Include="RazorLight" Version="2.0.0-beta1" />
+    <PackageReference Include="Sprache" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+</Project>

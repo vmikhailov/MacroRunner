@@ -1,0 +1,36 @@
+﻿Public Dim Application2 as ExcelApplication
+Public Dim Workbooks2 as Workbooks
+Public Dim ActiveWorkbook2 as Workbook
+Public Dim ActiveSheet2 as Worksheet
+Public Dim ActiveCell2 as Range
+Public Dim Rows2 as Range
+Public Dim Columns2 as Range
+Public Dim Cells2 as Range
+Public Dim Range2 as Range
+Public Dim Selection2 as Range
+
+Public Sub MsgBox(message as Object)
+End Sub
+
+Public Function Now() as ExcelDate
+End Function
+
+Public Function ToDate(ts as TimeSpan) as Date
+End Function
+
+Public Function Right1(str as String, num as Integer) as String
+End Function
+
+Public Function Left2(str as String, num as Integer) as String
+End Function
+
+Public Dim TestValue as Integer
+
+Public Sub MainSetValue()
+	TestValue = 123
+End Sub
+
+Public Function MainGetValue() as Integer
+	MainGetValue = TestValue
+End Function
+

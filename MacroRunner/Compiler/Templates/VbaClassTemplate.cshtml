@@ -1,0 +1,6 @@
+﻿@{ Layout = null; }
+@model MacroRunner.Compiler.CodeBlock
+Public Class @Model.Name
+Public Dim Globals as MacroRunner.Runtime.ExcelGlobals
+@Raw(@Model.Body)
+End Class
