@@ -9,12 +9,12 @@ namespace MacroRunner.Helpers
     {
         public static void SetStaticField(this Type type, string name, object value)
         {
-            type.GetField(name).SetValue(null, value);
+            type.GetField(name)!.SetValue(null, value);
         }
 
-        public static object GetStaticField(this Type type, string name)
+        public static object? GetStaticField(this Type type, string name)
         {
-            return type.GetField(name).GetValue(null);
+            return type.GetField(name)!.GetValue(null);
         }
 
         public static IEnumerable<MethodInfo> GetPublicStaticMethods(this Type type, string name, int args = 0) =>

@@ -14,7 +14,7 @@ public class FormulaTests
         var parsed = parser.ParseExpression("1+2*(3+4)");
         var func = parsed.Compile();
         
-        ((decimal)func()).Should().Be(15);
+        func().Should().Be(15);
     }
     
     [Fact]
@@ -24,7 +24,7 @@ public class FormulaTests
         var parsed = parser.ParseExpression("1.1 + 2.3");
         var func = parsed.Compile();
         
-        ((decimal)func()).Should().Be(3.4m);
+        func().Should().Be(3.4m);
     }
     
     [Fact]
@@ -34,7 +34,7 @@ public class FormulaTests
         var parsed = parser.ParseExpression("1 + 2.3");
         var func = parsed.Compile();
         
-        ((decimal)func()).Should().Be(3.3m);
+        func().Should().Be(3.3m);
     }
     
     [Fact]
@@ -48,13 +48,43 @@ public class FormulaTests
     }
 
     [Fact]
-    public void ShouldUseScalarFunction()
+    public void ShouldComputeScalarFunction()
     {
-        var parser = new FormulaParser<string>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("\"aaaa\" + \"bbb\"");
+        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression("sqrt(4)");
         var func = parsed.Compile();
         
-        func().Should().Be("aaaabbb");
+        func().Should().Be(2);
+    }
+    
+    [Fact]
+    public void ShouldComputeScalarFunctionAndConvertToString()
+    {
+        var parser = new FormulaParser<string>(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression("text(sqrt(4))");
+        var func = parsed.Compile();
+        
+        func().Should().Be("2");
+    }
+    
+    [Fact]
+    public void ShouldComputeScalarFunctionAndConvertToStringWithFormatting()
+    {
+        var parser = new FormulaParser<string>(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression("text(sqrt(4), \"0000\")");
+        var func = parsed.Compile();
+        
+        func().Should().Be("0002");
+    }
+    
+    [Fact]
+    public void ShouldComputeLogicalFunction()
+    {
+        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression("and(true, false)");
+        var func = parsed.Compile();
+        
+        func().Should().Be(2);
     }
    
     [Fact]

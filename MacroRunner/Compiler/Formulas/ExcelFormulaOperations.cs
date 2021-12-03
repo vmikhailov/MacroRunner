@@ -6,7 +6,7 @@ namespace MacroRunner.Compiler.Formulas
         
         public static decimal Add(decimal a, decimal b) => a + b;
 
-        //public static dynamic Add(dynamic a, dynamic b) => a + b;
+        public static dynamic Add(dynamic a, dynamic b) => a + b;
 
         public static int Subtract(int a, int b) => a - b;
 

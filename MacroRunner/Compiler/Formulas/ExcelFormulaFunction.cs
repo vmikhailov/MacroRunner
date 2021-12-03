@@ -1,4 +1,5 @@
-using MacroRunner.Runtime.Excel;
+using System;
+using Range = MacroRunner.Runtime.Excel.Range;
 
 namespace MacroRunner.Compiler.Formulas
 {
@@ -7,6 +8,16 @@ namespace MacroRunner.Compiler.Formulas
         public static decimal Sum(Range r)
         {
             return (r.To.RowNumber - r.From.RowNumber + 1) * (r.To.ColumnNumber - r.From.ColumnNumber + 1);
+        }
+        
+        public static string Text(decimal a)
+        {
+            return a.ToString();
+        }
+
+        public static string Text(decimal a, string format)
+        {
+            return a.ToString(format);
         }
         
         public static dynamic Vlookup(int a, int b)
