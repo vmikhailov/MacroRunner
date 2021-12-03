@@ -13,7 +13,7 @@ namespace MacroRunner
     {
         private static void Main(string[] args)
         {
-            var parser = new FormulaParser<decimal>(new FormulaParserSettings() { ParametersDelimiter = ',' });
+            var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
             
             // var addr1 = FormulaParser.Range.Parse("A1");
             // var addr2 = FormulaParser.Range.Parse("AAA1");
@@ -42,11 +42,11 @@ namespace MacroRunner
             // Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
 
             //var parsed5 = parser.ParseExpression("sum(A1:B1) * sum(A2:ZZ3332) * 19 + 7");
-            var parsed5 = parser.ParseExpression("1 + 2");
+            var parsed5 = parser.ParseExpression<decimal>("1 + 2");
             Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
             
             //var parsed6 = parser.ParseExpression("100/(10 % 4) - 47.0 + 1");
-            var parsed6 = parser.ParseExpression("100/(10 % 4) - 49.0 - 2 - 1");
+            var parsed6 = parser.ParseExpression<decimal>("100/(10 % 4) - 49.0 - 2 - 1");
             Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
 
             var fnc = parsed6.Compile();

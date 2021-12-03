@@ -60,7 +60,7 @@ namespace MacroRunner.Compiler
             return this;
         }
 
-        public MacroCompiler AddClasses(IEnumerable<TextResource> resource, string prefix = null)
+        public MacroCompiler AddClasses(IEnumerable<TextResource> resource, string? prefix = null)
         {
             resource.ForEach(x => AddClass(prefix + x.Name, x.Text));
 
@@ -81,7 +81,7 @@ namespace MacroRunner.Compiler
             return this;
         }
 
-        public MacroCompiler AddModules(IEnumerable<TextResource> resource, string prefix = null)
+        public MacroCompiler AddModules(IEnumerable<TextResource> resource, string? prefix = null)
         {
             resource.ForEach(x => AddModule(prefix + x.Name, x.Text));
 
@@ -133,7 +133,7 @@ namespace MacroRunner.Compiler
         {
             var preProcessedText = _razor.CompileRenderAsync(
                                              templateName,
-                                             new CodeBlock { Name = name, Body = body })
+                                             new CodeBlock(name, body))
                                          .Result;
 
             var tree = VisualBasicSyntaxTree.ParseText(

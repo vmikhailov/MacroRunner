@@ -2,7 +2,14 @@
 {
     public class CodeBlock
     {
-        public string Name { get; set; }
-        public string Body { get; set; }
+        public CodeBlock(string name, string body)
+        {
+            Name = name;
+            Body = body;
+        }
+
+        public string Name { get; }
+
+        public string Body { get; }
     }
 }

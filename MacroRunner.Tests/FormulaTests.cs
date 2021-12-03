@@ -10,8 +10,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeSimpleIntMath()
     {
-        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("1+2*(3+4)");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<decimal>("1+2*(3+4)");
         var func = parsed.Compile();
         
         func().Should().Be(15);
@@ -20,8 +20,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeSimpleDecimalMath()
     {
-        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("1.1 + 2.3");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<decimal>("1.1 + 2.3");
         var func = parsed.Compile();
         
         func().Should().Be(3.4m);
@@ -30,8 +30,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeSimpleMixedMath()
     {
-        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("1 + 2.3");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<decimal>("1 + 2.3");
         var func = parsed.Compile();
         
         func().Should().Be(3.3m);
@@ -40,8 +40,8 @@ public class FormulaTests
     [Fact]
     public void ShouldConcatTwoStrings()
     {
-        var parser = new FormulaParser<string>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("\"aaaa\" + \"bbb\"");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<string>("\"aaaa\" + \"bbb\"");
         var func = parsed.Compile();
         
         func().Should().Be("aaaabbb");
@@ -50,8 +50,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeScalarFunction()
     {
-        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("sqrt(4)");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<decimal>("sqrt(4)");
         var func = parsed.Compile();
         
         func().Should().Be(2);
@@ -60,8 +60,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeScalarFunctionAndConvertToString()
     {
-        var parser = new FormulaParser<string>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("text(sqrt(4))");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<string>("text(sqrt(4))");
         var func = parsed.Compile();
         
         func().Should().Be("2");
@@ -70,8 +70,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeScalarFunctionAndConvertToStringWithFormatting()
     {
-        var parser = new FormulaParser<string>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("text(sqrt(4), \"0000\")");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<string>("text(sqrt(4), \"0000\")");
         var func = parsed.Compile();
         
         func().Should().Be("0002");
@@ -80,8 +80,8 @@ public class FormulaTests
     [Fact]
     public void ShouldComputeLogicalFunction()
     {
-        var parser = new FormulaParser<decimal>(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression("and(true, false)");
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<decimal>("and(true, false)");
         var func = parsed.Compile();
         
         func().Should().Be(2);
@@ -90,8 +90,8 @@ public class FormulaTests
     [Fact]
     public void ShouldNotSubtractTwoStrings()
     {
-        var parser = new FormulaParser<dynamic>(new() { ParametersDelimiter = ',' });
-        var exception = Assert.Throws<InvalidOperationException>(() => parser.ParseExpression("\"aaaa\" - \"bbb\""));
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var exception = Assert.Throws<InvalidOperationException>(() => parser.ParseExpression<dynamic>("\"aaaa\" - \"bbb\""));
 
         Assert.Contains("No method", exception.Message);
     }

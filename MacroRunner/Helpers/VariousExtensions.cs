@@ -57,7 +57,7 @@ namespace MacroRunner.Helpers
             }
         }
 
-        public static void PrintSymbols(this SyntaxTree tree, SemanticModel model, Func<SyntaxNode, bool> filter = null)
+        public static void PrintSymbols(this SyntaxTree tree, SemanticModel model, Func<SyntaxNode, bool>? filter = null)
         {
             var nodes = tree.GetRoot().DescendantNodesAndSelf();
             if (filter != null)

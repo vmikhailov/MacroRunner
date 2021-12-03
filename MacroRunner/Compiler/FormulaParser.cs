@@ -12,12 +12,7 @@ using ExcelRange = MacroRunner.Runtime.Excel.Range;
 
 namespace MacroRunner.Compiler
 {
-    public class FormulaParserSettings
-    {
-        public char ParametersDelimiter = ',';
-    }
-
-    public class FormulaParser<T>
+    public class FormulaParser
     {
         private readonly FormulaParserSettings _settings;
 
@@ -25,6 +20,8 @@ namespace MacroRunner.Compiler
         {
             _settings = settings;
         }
+
+        public Expression<Func<T>> ParseExpression<T>(string text) => GetLambda<T>().Parse(text);
 
         public static Parser<Address> Address =>
             from fixedColumn in Parse.String("$").Token().Optional()
@@ -95,11 +92,10 @@ namespace MacroRunner.Compiler
 
         private Parser<Expression> Expr => Parse.ChainOperator(Add.Or(Subtract), Term, MakeBinary);
 
-        private Parser<Expression<Func<T>>> Lambda => Expr.End().Select(TypeCast);
 
-        public Expression<Func<T>> ParseExpression(string text) => Lambda.Parse(text);
+        private Parser<Expression<Func<T>>> GetLambda<T>() => Expr.End().Select(TypeCast<T>);
 
-        private static Expression<Func<T>> TypeCast(Expression body)
+        private static Expression<Func<T>> TypeCast<T>(Expression body)
         {
             var type = GetExpressionType(body);
             if (typeof(T) != type)
@@ -200,11 +196,11 @@ namespace MacroRunner.Compiler
         private static MethodInfo? FindFunction(string name, Type[] parameterTypes)
         {
             var methodInfo = GetFunctionClasses()
-                              .SelectMany(
-                                  t => t.GetPublicStaticMethods(name, parameterTypes.Length)
-                                        .Where(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(parameterTypes)))
-                              .FirstOrDefault();
-            
+                             .SelectMany(
+                                 t => t.GetPublicStaticMethods(name, parameterTypes.Length)
+                                       .Where(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(parameterTypes)))
+                             .FirstOrDefault();
+
             return methodInfo;
         }
 
