@@ -52,11 +52,15 @@ namespace MacroRunner.Compiler
         private static Parser<ExpressionType> Divide = Operator("/", ExpressionType.Divide);
         private static Parser<ExpressionType> Modulo = Operator("%", ExpressionType.Modulo);
         private static Parser<ExpressionType> Power = Operator("^", ExpressionType.Power);
+        private static Parser<ExpressionType> GreaterThan = Operator(">", ExpressionType.GreaterThan);
+        private static Parser<ExpressionType> LessThan = Operator("<", ExpressionType.LessThan);
+        private static Parser<ExpressionType> Equal = Operator("=", ExpressionType.Equal);
+        private static Parser<ExpressionType> NotEqual = Operator("<>", ExpressionType.NotEqual);
 
         private Parser<Expression> Function =>
             from name in Identifier
             from lparen in Parse.Char('(')
-            from expr in Parse.Ref(() => Expr).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
+            from expr in Parse.Ref(() => MathExpression).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
             from rparen in Parse.Char(')')
             select MakeFunctionCall(name, expr.ToArray());
 
@@ -71,18 +75,22 @@ namespace MacroRunner.Compiler
                  .Select(x => Expression.Constant(ParseConstant(x)))
                  .Or(StringConstant);
 
-        private Parser<Expression> Variable =
+        private Parser<Expression> Variable =>
             from name in Identifier.Text()
             select MakeVariableAccess(name);
 
+        private Parser<Expression> RangeExp =>
+            from range in Range
+            select Expression.Constant(range);
+
         private Parser<Expression> ExpressionInBraces =>
             (from lparen in Parse.Char('(')
-             from expr in Parse.Ref(() => Expr)
+             from expr in Parse.Ref(() => LogicalExpression)
              from rparen in Parse.Char(')')
              select expr).Named("expression");
 
         private Parser<Expression> Factor =>
-            ExpressionInBraces.XOr(Constant.Or(Function).Or(Variable).Or(Range.Select(x => Expression.Constant(x))));
+            ExpressionInBraces.XOr(Constant.Or(Function).Or(Variable).Or(RangeExp));
 
         private Parser<Expression> Operand =>
             ((from sign in Parse.Char('-')
@@ -94,10 +102,17 @@ namespace MacroRunner.Compiler
 
         private Parser<Expression> Term => Parse.ChainOperator(Multiply.Or(Divide).Or(Modulo), InnerTerm, MakeBinary);
 
-        private Parser<Expression> Expr => Parse.ChainOperator(Add.Or(Subtract), Term, MakeBinary);
+        private Parser<Expression> MathExpression => Parse.ChainOperator(Add.Or(Subtract), Term, MakeBinary);
 
+        private Parser<Expression> LogicalExpression => Comparision.Or(MathExpression);
 
-        private Parser<Expression<Func<T>>> GetLambda<T>() => Expr.End().Select(TypeCast<T>);
+        private Parser<Expression> Comparision =>
+            from exp1 in MathExpression
+            from op in NotEqual.Or(LessThan).XOr(GreaterThan.Or(Equal))
+            from exp2 in MathExpression
+            select MakeBinary(op, exp1, exp2);
+
+        private Parser<Expression<Func<T>>> GetLambda<T>() => LogicalExpression.End().Select(TypeCast<T>);
 
         private static Expression<Func<T>> TypeCast<T>(Expression body)
         {
@@ -131,6 +146,10 @@ namespace MacroRunner.Compiler
                 case ExpressionType.Modulo:
                 case ExpressionType.Multiply:
                 case ExpressionType.Subtract:
+                case ExpressionType.GreaterThan:
+                case ExpressionType.LessThan:
+                case ExpressionType.Equal:
+                case ExpressionType.NotEqual:
                     return MakeOperationCall(expressionType.ToString(), arg1, arg2);
 
                 default:
@@ -206,10 +225,20 @@ namespace MacroRunner.Compiler
             {
                 return (2, Expression.GreaterThan(arg, Expression.Constant(0)));
             }
-            
+
             if (paramType == typeof(bool) && argType == typeof(double))
             {
                 return (2, Expression.GreaterThan(arg, Expression.Constant(0m)));
+            }
+            
+            if (paramType == typeof(int) && argType == typeof(bool))
+            {
+                return (2, Expression.Convert(arg, paramType));
+            }
+            
+            if (paramType == typeof(double) && argType == typeof(bool))
+            {
+                return (2, Expression.Convert(arg, paramType));
             }
 
             if (paramType.IsAssignableFrom(argType)) return (3, Expression.Convert(arg, paramType));

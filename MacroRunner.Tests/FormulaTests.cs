@@ -89,7 +89,7 @@ public class FormulaTests
     }
     
     [Fact]
-    public void ShouldComputeLogicalFunction01()
+    public void ShouldComputeLogicalFunctionAutoCastToBool()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
         var parsed = parser.ParseExpression<bool>("or(1, and(1, 0))");
@@ -97,6 +97,58 @@ public class FormulaTests
         
         func().Should().Be(true);
     }
+    
+    [Fact]
+    public void ShouldComputeComparisionGreaterThan()
+    {
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<bool>("(1 + 3) > 0");
+        var func = parsed.Compile();
+        
+        func().Should().Be(true);
+    }
+    
+      
+    [Fact]
+    public void ShouldComputeComparisionLessThan()
+    {
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<bool>("(1 + 3) < 0");
+        var func = parsed.Compile();
+        
+        func().Should().Be(false);
+    }
+    
+    [Fact]
+    public void ShouldComputeComparisionNotEqual()
+    {
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<bool>("1 <> 2");
+        var func = parsed.Compile();
+        
+        func().Should().Be(true);
+    }
+    
+    [Fact]
+    public void ShouldComputeMathFunctionAutoCastFromBool()
+    {
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<int>("(1 > 0) + (3 = 3)");
+        var func = parsed.Compile();
+        
+        func().Should().Be(2);
+    }
+    
+    [Fact]
+    public void ShouldComputeMathFunctionAutoCastFromBoolMixed()
+    {
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<double>("(1 > 0) + 3.3");
+        var func = parsed.Compile();
+        
+        func().Should().Be(4.3);
+    }
+
    
     [Fact]
     public void ShouldNotSubtractTwoStrings()
