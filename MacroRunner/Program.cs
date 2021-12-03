@@ -42,11 +42,11 @@ namespace MacroRunner
             // Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
 
             //var parsed5 = parser.ParseExpression("sum(A1:B1) * sum(A2:ZZ3332) * 19 + 7");
-            var parsed5 = parser.ParseExpression<decimal>("1 + 2");
+            var parsed5 = parser.ParseExpression<double>("1 + 2");
             Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
             
             //var parsed6 = parser.ParseExpression("100/(10 % 4) - 47.0 + 1");
-            var parsed6 = parser.ParseExpression<decimal>("100/(10 % 4) - 49.0 - 2 - 1");
+            var parsed6 = parser.ParseExpression<double>("100/(10 % 4) - 49.0 - 2 - 1");
             Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
 
             var fnc = parsed6.Compile();

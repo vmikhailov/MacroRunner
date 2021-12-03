@@ -76,11 +76,6 @@ namespace MacroRunner.Runtime.Excel
             return (double)Convert.ChangeType(r.Value, TypeCode.Double);
         }
 
-        public static implicit operator decimal(Range r)
-        {
-            return (decimal)Convert.ChangeType(r.Value, TypeCode.Decimal);
-        }
-
         public void AutoFilter()
         {
         }

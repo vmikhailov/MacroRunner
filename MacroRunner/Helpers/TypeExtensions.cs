@@ -17,6 +17,12 @@ namespace MacroRunner.Helpers
             return type.GetField(name)!.GetValue(null);
         }
 
+        public static PropertyInfo? GetPublicStaticProperty(this Type type, string name) =>
+            type.GetTypeInfo()
+                .GetProperties(BindingFlags.Static | BindingFlags.Public)
+                .Where(x => StringComparer.InvariantCultureIgnoreCase.Compare(x.Name, name) == 0)
+                .FirstOrDefault();
+
         public static IEnumerable<MethodInfo> GetPublicStaticMethods(this Type type, string name, int args = 0) =>
             type.GetTypeInfo()
                 .GetMethods(BindingFlags.Static | BindingFlags.Public)

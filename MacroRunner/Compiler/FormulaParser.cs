@@ -58,18 +58,22 @@ namespace MacroRunner.Compiler
             from lparen in Parse.Char('(')
             from expr in Parse.Ref(() => Expr).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
             from rparen in Parse.Char(')')
-            select CallFunction(name, expr.ToArray());
+            select MakeFunctionCall(name, expr.ToArray());
 
-        private static Parser<Expression> StringConstant =
+        private Parser<Expression> StringConstant =>
             from open in Parse.Char('"')
             from content in Parse.CharExcept('"').Many().Text()
             from close in Parse.Char('"')
             select Expression.Constant(content);
 
-        private static Parser<Expression> Constant =
+        private Parser<Expression> Constant =>
             Parse.Decimal
                  .Select(x => Expression.Constant(ParseConstant(x)))
                  .Or(StringConstant);
+
+        private Parser<Expression> Variable =
+            from name in Identifier.Text()
+            select MakeVariableAccess(name);
 
         private Parser<Expression> ExpressionInBraces =>
             (from lparen in Parse.Char('(')
@@ -78,7 +82,7 @@ namespace MacroRunner.Compiler
              select expr).Named("expression");
 
         private Parser<Expression> Factor =>
-            ExpressionInBraces.XOr(Constant.Or(Function).Or(Range.Select(x => Expression.Constant(x))));
+            ExpressionInBraces.XOr(Constant.Or(Function).Or(Variable).Or(Range.Select(x => Expression.Constant(x))));
 
         private Parser<Expression> Operand =>
             ((from sign in Parse.Char('-')
@@ -106,26 +110,10 @@ namespace MacroRunner.Compiler
             return Expression.Lambda<Func<T>>(body);
         }
 
-        private static Expression CallFunction(string name, Expression[] parameters)
-        {
-            var parameterTypes = parameters.Select(x => x.Type).ToArray();
-            var methodInfo = FindFunction(name, parameterTypes);
-            if (methodInfo == null)
-            {
-                throw new ParseException(
-                    string.Format(
-                        "Function '{0}({1})' does not exist.",
-                        name,
-                        string.Join(",", parameters.Select(e => e.Type.Name))));
-            }
-
-            return Expression.Call(methodInfo, parameters);
-        }
-
         private static object ParseConstant(string str)
         {
-            //if (int.TryParse(str, out var intValue)) return intValue;
-            if (decimal.TryParse(str, out var decValue)) return decValue;
+            if (int.TryParse(str, out var intValue)) return intValue;
+            if (double.TryParse(str, out var decValue)) return decValue;
             return str;
         }
 
@@ -150,80 +138,83 @@ namespace MacroRunner.Compiler
             }
         }
 
-        private Expression MakeOperationCall(string name, params Expression[] args)
+
+        private static Expression MakeVariableAccess(string name)
         {
-            var argTypes = args.Select(GetExpressionType).ToList();
+            var prop = typeof(ExcelFormulaConstants).GetPublicStaticProperty(name);
+            if (prop == null)
+            {
+                throw new ParseException(string.Format("Variable or constant '{0}' does not exist.", name));
+            }
 
-            var methodInfo = FindOperation(name, args, argTypes);
+            return Expression.Constant(prop.GetValue(null));
+        }
 
-            if (methodInfo == null)
+        private Expression MakeFunctionCall(string name, Expression[] args) => MakeCall(typeof(ExcelFormulaFunctions), name, args);
+
+        private Expression MakeOperationCall(string name, params Expression[] args) => MakeCall(typeof(ExcelFormulaOperations), name, args);
+
+        private Expression MakeCall(Type impl, string name, params Expression[] args)
+        {
+            var methodWithArgs = impl.GetPublicStaticMethods(name, args.Length)
+                                     .Select(x => new { Method = x, Match = MatchArgs(x.GetParameters(), args) })
+                                     .Where(x => x.Match.Score > 0)
+                                     .OrderBy(x => x.Match.Score)
+                                     .Select(x => new { x.Method, x.Match.Args })
+                                     .FirstOrDefault();
+
+            if (methodWithArgs == null)
             {
                 throw new ParseException(
                     string.Format(
                         "Function '{0}({1})' does not exist.",
                         name,
-                        string.Join(",", args.Select(e => e.Type.Name))));
+                        string.Join(", ", args.Select(e => e.Type.Name))));
             }
 
-            var arguments = new Expression[args.Length];
-            var parameters = methodInfo.GetParameters();
-            for (var i = 0; i < arguments.Length; i++)
+            return Expression.Call(methodWithArgs.Method, methodWithArgs.Args);
+        }
+
+        private (int Score, Expression[] Args) MatchArgs(ParameterInfo[] parameters, Expression[] args)
+        {
+            var newArgs = parameters.Zip(args)
+                                    .Select(x => MatchArgs(x.First.ParameterType, x.Second))
+                                    .ToList();
+
+            if (newArgs.Any(x => x.Score == 0))
             {
-                var paramType = parameters[i].ParameterType;
-                if (paramType != argTypes[i])
-                {
-                    arguments[i] = Expression.Convert(args[i], paramType);
-                }
-                else
-                {
-                    arguments[i] = args[i];
-                }
+                return (0, args);
             }
 
-            return Expression.Call(typeof(ExcelFormulaOperations), name, null, arguments);
+            return (newArgs.Select(x => x.Score).Sum(), newArgs.Select(x => x.Arg).ToArray());
         }
 
-        private MethodInfo? FindOperation(string name, Expression[] args, List<Type> argTypes)
+        private (int Score, Expression Arg) MatchArgs(Type paramType, Expression arg)
         {
-            var methodInfo = typeof(ExcelFormulaOperations)
-                             .GetPublicStaticMethods(name, argTypes.Count)
-                             .OrderBy(x => GetMatchingScore(x.GetParameters(), argTypes))
-                             .FirstOrDefault();
+            var argType = GetExpressionType(arg);
+            if (paramType == argType)
+            {
+                return (1, arg);
+            }
 
-            return methodInfo;
-        }
+            if (paramType == typeof(double) && argType == typeof(int))
+            {
+                return (2, Expression.Convert(arg, paramType));
+            }
 
-        private static MethodInfo? FindFunction(string name, Type[] parameterTypes)
-        {
-            var methodInfo = GetFunctionClasses()
-                             .SelectMany(
-                                 t => t.GetPublicStaticMethods(name, parameterTypes.Length)
-                                       .Where(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(parameterTypes)))
-                             .FirstOrDefault();
+            if (paramType == typeof(bool) && argType == typeof(int))
+            {
+                return (2, Expression.GreaterThan(arg, Expression.Constant(0)));
+            }
+            
+            if (paramType == typeof(bool) && argType == typeof(double))
+            {
+                return (2, Expression.GreaterThan(arg, Expression.Constant(0m)));
+            }
 
-            return methodInfo;
-        }
+            if (paramType.IsAssignableFrom(argType)) return (3, Expression.Convert(arg, paramType));
 
-        private static IEnumerable<Type> GetFunctionClasses()
-        {
-            return Assembly.GetExecutingAssembly()
-                           .GetTypes()
-                           .Where(x => x.Name.StartsWith("ExcelFormulaFunction"));
-        }
-
-        private int GetMatchingScore(ParameterInfo[] parameters, List<Type> argTypes)
-        {
-            return parameters.Zip(argTypes)
-                             .Select(x => GetMatchingScore(x.First.ParameterType, x.Second))
-                             .Sum();
-        }
-
-        private int GetMatchingScore(Type type1, Type type2)
-        {
-            if (type1 == type2) return 0;
-            if (type1 == typeof(decimal) && type2 == typeof(int)) return 1;
-            if (type1.IsAssignableFrom(type2)) return 10;
-            return 1000;
+            return (0, arg);
         }
 
         private static Type GetExpressionType(Expression exp) =>

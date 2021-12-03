@@ -1,21 +1,20 @@
-using System;
 using Range = MacroRunner.Runtime.Excel.Range;
 
 namespace MacroRunner.Compiler.Formulas
 {
-    public static partial class ExcelFormulaFunction
+    public static partial class ExcelFormulaFunctions
     {
-        public static decimal Sum(Range r)
+        public static double Sum(Range r)
         {
             return (r.To.RowNumber - r.From.RowNumber + 1) * (r.To.ColumnNumber - r.From.ColumnNumber + 1);
         }
         
-        public static string Text(decimal a)
+        public static string Text(double a)
         {
             return a.ToString();
         }
 
-        public static string Text(decimal a, string format)
+        public static string Text(double a, string format)
         {
             return a.ToString(format);
         }

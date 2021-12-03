@@ -1,6 +1,7 @@
 using System;
 using FluentAssertions;
 using MacroRunner.Compiler;
+using Sprache;
 using Xunit;
 
 namespace MacroRunner.Tests;
@@ -11,30 +12,30 @@ public class FormulaTests
     public void ShouldComputeSimpleIntMath()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression<decimal>("1+2*(3+4)");
+        var parsed = parser.ParseExpression<int>("1+2*(3+4)");
         var func = parsed.Compile();
         
         func().Should().Be(15);
     }
     
     [Fact]
-    public void ShouldComputeSimpleDecimalMath()
+    public void ShouldComputeSimpleDoubleMath()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression<decimal>("1.1 + 2.3");
+        var parsed = parser.ParseExpression<double>("1.1 + 2.3");
         var func = parsed.Compile();
         
-        func().Should().Be(3.4m);
+        func().Should().Be(3.4);
     }
     
     [Fact]
     public void ShouldComputeSimpleMixedMath()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression<decimal>("1 + 2.3");
+        var parsed = parser.ParseExpression<double>("1 + 2.3");
         var func = parsed.Compile();
         
-        func().Should().Be(3.3m);
+        func().Should().Be(3.3);
     }
     
     [Fact]
@@ -51,7 +52,7 @@ public class FormulaTests
     public void ShouldComputeScalarFunction()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression<decimal>("sqrt(4)");
+        var parsed = parser.ParseExpression<double>("sqrt(4)");
         var func = parsed.Compile();
         
         func().Should().Be(2);
@@ -81,18 +82,28 @@ public class FormulaTests
     public void ShouldComputeLogicalFunction()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
-        var parsed = parser.ParseExpression<decimal>("and(true, false)");
+        var parsed = parser.ParseExpression<bool>("or(true, and(true, false))");
         var func = parsed.Compile();
         
-        func().Should().Be(2);
+        func().Should().Be(true);
+    }
+    
+    [Fact]
+    public void ShouldComputeLogicalFunction01()
+    {
+        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        var parsed = parser.ParseExpression<bool>("or(1, and(1, 0))");
+        var func = parsed.Compile();
+        
+        func().Should().Be(true);
     }
    
     [Fact]
     public void ShouldNotSubtractTwoStrings()
     {
         var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
-        var exception = Assert.Throws<InvalidOperationException>(() => parser.ParseExpression<dynamic>("\"aaaa\" - \"bbb\""));
+        var exception = Assert.Throws<ParseException>(() => parser.ParseExpression<dynamic>("\"aaaa\" - \"bbb\""));
 
-        Assert.Contains("No method", exception.Message);
+        Assert.Contains("Function 'Subtract(String, String)' does not exist.", exception.Message);
     }
 }
