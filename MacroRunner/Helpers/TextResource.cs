@@ -1,9 +1,8 @@
-﻿namespace MacroRunner.Helpers
-{
-    public class TextResource
-    {
-        public string Name { get; set; }
+﻿namespace MacroRunner.Helpers;
 
-        public string Text { get; set; }
-    }
+public class TextResource
+{
+    public string Name { get; set; }
+
+    public string Text { get; set; }
 }

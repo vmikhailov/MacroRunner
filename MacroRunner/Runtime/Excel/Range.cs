@@ -1,115 +1,114 @@
 ﻿using System;
 
-namespace MacroRunner.Runtime.Excel
+namespace MacroRunner.Runtime.Excel;
+
+public class Range
 {
-    public class Range
+    public Address From;
+    public Address To;
+
+    public Range()
     {
-        public Address From;
-        public Address To;
+    }
 
-        public Range()
+    public Range(Address address)
+    {
+        From = address;
+        To = address;
+    }
+
+    public Range(Address from, Address to)
+    {
+        From = @from;
+        To = to;
+    }
+
+    public Range Cells { get; set; }
+
+    public int Column { get; set; }
+
+    public Range Columns { get; set; }
+
+    public int Count { get; }
+
+    public object FormulaR1C1 { get; set; }
+
+    public Range this[int row, int column]
+    {
+        get
         {
+            var r = new Range();
+            r.Value = 1;
+            return r;
         }
+        set { }
+    }
 
-        public Range(Address address)
-        {
-            From = address;
-            To = address;
-        }
+    public Range this[long row, long column] => null;
 
-        public Range(Address from, Address to)
-        {
-            From = @from;
-            To = to;
-        }
+    /*
+    public Range this[Range from, Range to] => null;
 
-        public Range Cells { get; set; }
+    public Range this[string rangeName] => null;
+    */
+    public Range this[params object[] objs] => null;
 
-        public int Column { get; set; }
+    public int Row { get; set; }
 
-        public Range Columns { get; set; }
+    public Range Rows { get; set; }
 
-        public int Count { get; }
+    public object Value { get; set; }
 
-        public object FormulaR1C1 { get; set; }
+    public object Value2 { get; set; }
 
-        public Range this[int row, int column]
-        {
-            get
-            {
-                var r = new Range();
-                r.Value = 1;
-                return r;
-            }
-            set { }
-        }
+    public static implicit operator string(Range r)
+    {
+        return (string)Convert.ChangeType(r.Value, TypeCode.String);
+    }
 
-        public Range this[long row, long column] => null;
+    public static implicit operator int(Range r)
+    {
+        return (int)Convert.ChangeType(r.Value, TypeCode.Int32);
+    }
 
-        /*
-        public Range this[Range from, Range to] => null;
+    public static implicit operator double(Range r)
+    {
+        return (double)Convert.ChangeType(r.Value, TypeCode.Double);
+    }
 
-        public Range this[string rangeName] => null;
-        */
-        public Range this[params object[] objs] => null;
+    public void AutoFilter()
+    {
+    }
 
-        public int Row { get; set; }
+    public void Clear()
+    {
+    }
 
-        public Range Rows { get; set; }
+    public void ClearComments()
+    {
+    }
 
-        public object Value { get; set; }
+    public void ClearContents()
+    {
+    }
 
-        public object Value2 { get; set; }
+    public void ClearFormats()
+    {
+    }
 
-        public static implicit operator string(Range r)
-        {
-            return (string)Convert.ChangeType(r.Value, TypeCode.String);
-        }
+    public void ClearHyperlinks()
+    {
+    }
 
-        public static implicit operator int(Range r)
-        {
-            return (int)Convert.ChangeType(r.Value, TypeCode.Int32);
-        }
+    public void Group()
+    {
+    }
 
-        public static implicit operator double(Range r)
-        {
-            return (double)Convert.ChangeType(r.Value, TypeCode.Double);
-        }
+    public void Select()
+    {
+    }
 
-        public void AutoFilter()
-        {
-        }
-
-        public void Clear()
-        {
-        }
-
-        public void ClearComments()
-        {
-        }
-
-        public void ClearContents()
-        {
-        }
-
-        public void ClearFormats()
-        {
-        }
-
-        public void ClearHyperlinks()
-        {
-        }
-
-        public void Group()
-        {
-        }
-
-        public void Select()
-        {
-        }
-
-        public void Ungroup()
-        {
-        }
+    public void Ungroup()
+    {
     }
 }

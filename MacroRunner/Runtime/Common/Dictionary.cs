@@ -1,12 +1,11 @@
 ﻿using System.Collections;
 
-namespace MacroRunner.Runtime.Common
+namespace MacroRunner.Runtime.Common;
+
+public class Dictionary : Hashtable
 {
-    public class Dictionary : Hashtable
+    public bool Exists(object value)
     {
-        public bool Exists(object value)
-        {
-            return Contains(value);
-        }
+        return Contains(value);
     }
 }

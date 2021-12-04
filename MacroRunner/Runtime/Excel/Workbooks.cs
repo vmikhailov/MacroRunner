@@ -1,14 +1,13 @@
-﻿namespace MacroRunner.Runtime.Excel
+﻿namespace MacroRunner.Runtime.Excel;
+
+public class Workbooks
 {
-    public class Workbooks
+    public Range Cells { get; set; }
+
+    public Workbook this[string name] => null;
+
+    public Workbook Open(string name)
     {
-        public Range Cells { get; set; }
-
-        public Workbook this[string name] => null;
-
-        public Workbook Open(string name)
-        {
-            return null;
-        }
+        return null;
     }
 }

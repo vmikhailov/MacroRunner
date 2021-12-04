@@ -1,9 +1,8 @@
-﻿namespace MacroRunner.Runtime.Excel
+﻿namespace MacroRunner.Runtime.Excel;
+
+public class Outline
 {
-    public class Outline
+    public void ShowLevels(int rowLevels)
     {
-        public void ShowLevels(int rowLevels)
-        {
-        }
     }
 }

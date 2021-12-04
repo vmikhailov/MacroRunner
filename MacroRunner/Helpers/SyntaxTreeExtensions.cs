@@ -4,25 +4,24 @@ using System.Linq;
 using MacroRunner.Compiler.VBA;
 using Microsoft.CodeAnalysis;
 
-namespace MacroRunner.Helpers
+namespace MacroRunner.Helpers;
+
+public static class SyntaxTreeExtensions
 {
-    public static class SyntaxTreeExtensions
+    public static void Print(this IEnumerable<SyntaxTree> trees)
     {
-        public static void Print(this IEnumerable<SyntaxTree> trees)
+        foreach (var tree in trees)
         {
-            foreach (var tree in trees)
-            {
-                tree.Print();
-            }
+            tree.Print();
         }
+    }
 
-        public static void Print(this SyntaxTree tree)
-        {
-            var printer = new VBASyntaxPrinter();
-            Console.WriteLine(new string('*', 30));
+    public static void Print(this SyntaxTree tree)
+    {
+        var printer = new VBASyntaxPrinter();
+        Console.WriteLine(new string('*', 30));
 
-            Console.WriteLine($"{tree.FilePath} has {tree.GetRoot().DescendantNodesAndSelf().Count()} elements in syntax tree.");
-            printer.Visit(tree.GetRoot());
-        }
+        Console.WriteLine($"{tree.FilePath} has {tree.GetRoot().DescendantNodesAndSelf().Count()} elements in syntax tree.");
+        printer.Visit(tree.GetRoot());
     }
 }

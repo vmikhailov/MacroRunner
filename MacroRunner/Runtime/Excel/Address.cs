@@ -1,33 +1,32 @@
-namespace MacroRunner.Runtime.Excel
+namespace MacroRunner.Runtime.Excel;
+
+public class Address
 {
-    public class Address
+    public int RowNumber { get; set; }
+
+    public bool FixedRow { get; set; }
+
+    public string ColumnName { get; set; }
+
+    public bool FixedColumn { get; set; }
+
+    private int _columnNumber = -1;
+    public int ColumnNumber
     {
-        public int RowNumber { get; set; }
-
-        public bool FixedRow { get; set; }
-
-        public string ColumnName { get; set; }
-
-        public bool FixedColumn { get; set; }
-
-        private int _columnNumber = -1;
-        public int ColumnNumber
+        get
         {
-            get
+            if (_columnNumber == -1)
             {
-                if (_columnNumber == -1)
+                var n = 0;
+                foreach (var c in ColumnName)
                 {
-                    var n = 0;
-                    foreach (var c in ColumnName)
-                    {
-                        n = n * 26 + (c - 'A' + 1);
-                    }
-
-                    _columnNumber = n;
+                    n = n * 26 + (c - 'A' + 1);
                 }
 
-                return _columnNumber;
+                _columnNumber = n;
             }
+
+            return _columnNumber;
         }
     }
 }
