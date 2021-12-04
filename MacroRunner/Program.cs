@@ -46,7 +46,7 @@ namespace MacroRunner
             Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
             
             //var parsed6 = parser.ParseExpression("100/(10 % 4) - 47.0 + 1");
-            var parsed6 = parser.ParseExpression<double>("100/(10 % 4) - 49.0 - (2 - 1 - 2 + 1 + 2 + 3 - 3)");
+            var parsed6 = parser.ParseExpression<double>("100.0 / (10 % 4) - (49 + (2 - 1 - 2 + 1 + 2 + 3 - 3))");
             Console.WriteLine($"Run {run++}, Elapsed {sw.Elapsed}");
 
             var fnc = parsed6.Compile();

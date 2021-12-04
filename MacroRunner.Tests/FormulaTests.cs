@@ -24,7 +24,7 @@ public class FormulaTests
     public void ShouldComputeSimpleDoubleMath(string exp, double result) => RunTest(exp, result, 1e-15);
 
     [Fact]
-    public void ShouldConcatTwoStrings() => RunTest("\"aaaa\" + \"bbb\"", "aaaabbb");
+    public void ShouldConcatAutoConvertTwoStringsAndCompute() => RunTest("\"5\" + \"3\"", "8");
 
     [Theory]
     [InlineData("len(\"abc\")", 3)]

@@ -7,6 +7,7 @@ using MacroRunner.Compiler.Formulas;
 using MacroRunner.Helpers;
 using MacroRunner.Runtime;
 using MacroRunner.Runtime.Excel;
+using MoreLinq;
 using Sprache;
 using ExcelRange = MacroRunner.Runtime.Excel.Range;
 
@@ -120,7 +121,7 @@ namespace MacroRunner.Compiler
         {
             if (typeof(T) != body.Type)
             {
-                body = Expression.Convert(body, typeof(T));
+                body = TypeConversionHelper.GetTypeConversion(body.Type, typeof(T), body);
             }
 
             return Expression.Lambda<Func<T>>(body);
@@ -138,29 +139,27 @@ namespace MacroRunner.Compiler
             return Parse.String(op).Token().Return(opType);
         }
 
-        private Expression MakeBinary(ExpressionType expressionType, Expression arg1, Expression arg2)
+        private Expression MakeBinary(ExpressionType expressionType, Expression left, Expression right)
         {
-            switch (expressionType)
+            var (leftArg, rightArg) = TypeConversionHelper.FindBestMinimalMatchingType(left, right, expressionType);
+
+            return expressionType switch
             {
-                case ExpressionType.Add:
-                case ExpressionType.Divide:
-                case ExpressionType.Modulo:
-                case ExpressionType.Multiply:
-                case ExpressionType.Subtract:
-                case ExpressionType.GreaterThan:
-                case ExpressionType.GreaterThanOrEqual:
-                case ExpressionType.LessThan:
-                case ExpressionType.LessThanOrEqual:
-                case ExpressionType.Equal:
-                case ExpressionType.NotEqual:
-                    return MakeOperationCall(expressionType.ToString(), arg1, arg2);
-
-                default:
-                    throw new NotImplementedException($"Expression of type {expressionType} is not supported yet");
-            }
+                ExpressionType.Add => Expression.Add(leftArg, rightArg),
+                ExpressionType.Divide => Expression.Divide(leftArg, rightArg),
+                ExpressionType.Modulo => Expression.Modulo(leftArg, rightArg),
+                ExpressionType.Multiply => Expression.Multiply(leftArg, rightArg),
+                ExpressionType.Subtract => Expression.Subtract(leftArg, rightArg),
+                ExpressionType.GreaterThan => Expression.GreaterThan(leftArg, rightArg),
+                ExpressionType.GreaterThanOrEqual => Expression.GreaterThanOrEqual(leftArg, rightArg),
+                ExpressionType.LessThan => Expression.LessThan(leftArg, rightArg),
+                ExpressionType.LessThanOrEqual => Expression.LessThanOrEqual(leftArg, rightArg),
+                ExpressionType.Equal => Expression.Equal(leftArg, rightArg),
+                ExpressionType.NotEqual => Expression.NotEqual(leftArg, rightArg),
+                _ => throw new NotImplementedException($"Expression of type {expressionType} is not supported yet")
+            };
         }
-
-
+        
         private static Expression MakeVariableAccess(string name)
         {
             var prop = typeof(ExcelFormulaConstants).GetPublicStaticProperty(name);
@@ -173,8 +172,6 @@ namespace MacroRunner.Compiler
         }
 
         private Expression MakeFunctionCall(string name, Expression[] args) => MakeCall(typeof(ExcelFormulaFunctions), name, args);
-
-        private Expression MakeOperationCall(string name, params Expression[] args) => MakeCall(typeof(ExcelFormulaOperations), name, args);
 
         private Expression MakeCall(Type impl, string name, params Expression[] args)
         {
@@ -219,34 +216,8 @@ namespace MacroRunner.Compiler
                 return (1, arg);
             }
 
-            if (paramType == typeof(double) && argType == typeof(int))
-            {
-                return (2, Expression.Convert(arg, paramType));
-            }
-
-            if (paramType == typeof(bool) && argType == typeof(int))
-            {
-                return (2, Expression.GreaterThan(arg, Expression.Constant(0)));
-            }
-
-            if (paramType == typeof(bool) && argType == typeof(double))
-            {
-                return (2, Expression.GreaterThan(arg, Expression.Constant(0d)));
-            }
-
-            if (paramType == typeof(int) && argType == typeof(bool))
-            {
-                return (2, Expression.Convert(arg, paramType));
-            }
-
-            if (paramType == typeof(double) && argType == typeof(bool))
-            {
-                return (2, Expression.Convert(arg, paramType));
-            }
-
-            if (paramType.IsAssignableFrom(argType)) return (3, Expression.Convert(arg, paramType));
-
-            return (0, arg);
+            var conversion = TypeConversionHelper.GetTypeConversion(argType, paramType, arg);
+            return conversion != null ? (2, conversion) : (0, arg);
         }
     }
 }
