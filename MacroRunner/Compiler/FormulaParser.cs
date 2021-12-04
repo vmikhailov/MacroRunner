@@ -53,7 +53,9 @@ namespace MacroRunner.Compiler
         private static Parser<ExpressionType> Modulo = Operator("%", ExpressionType.Modulo);
         private static Parser<ExpressionType> Power = Operator("^", ExpressionType.Power);
         private static Parser<ExpressionType> GreaterThan = Operator(">", ExpressionType.GreaterThan);
+        private static Parser<ExpressionType> GreaterThanOrEqual = Operator(">=", ExpressionType.GreaterThanOrEqual);
         private static Parser<ExpressionType> LessThan = Operator("<", ExpressionType.LessThan);
+        private static Parser<ExpressionType> LessThanOrEqual = Operator("<=", ExpressionType.LessThanOrEqual);
         private static Parser<ExpressionType> Equal = Operator("=", ExpressionType.Equal);
         private static Parser<ExpressionType> NotEqual = Operator("<>", ExpressionType.NotEqual);
 
@@ -93,10 +95,10 @@ namespace MacroRunner.Compiler
             ExpressionInBraces.XOr(Constant.Or(Function).Or(Variable).Or(RangeExp));
 
         private Parser<Expression> Operand =>
-            ((from sign in Parse.Char('-')
-              from factor in Factor
-              select Expression.Negate(factor)
-                ).XOr(Factor)).Token();
+            (from sign in Parse.Char('-')
+             from factor in Factor
+             select Expression.Negate(factor)
+            ).XOr(Factor).Token();
 
         private Parser<Expression> InnerTerm => Parse.ChainOperator(Power, Operand, MakeBinary);
 
@@ -108,7 +110,7 @@ namespace MacroRunner.Compiler
 
         private Parser<Expression> Comparision =>
             from exp1 in MathExpression
-            from op in NotEqual.Or(LessThan).XOr(GreaterThan.Or(Equal))
+            from op in NotEqual.Or(LessThanOrEqual).Or(LessThan).XOr(GreaterThanOrEqual.Or(GreaterThan).Or(Equal))
             from exp2 in MathExpression
             select MakeBinary(op, exp1, exp2);
 
@@ -116,8 +118,7 @@ namespace MacroRunner.Compiler
 
         private static Expression<Func<T>> TypeCast<T>(Expression body)
         {
-            var type = GetExpressionType(body);
-            if (typeof(T) != type)
+            if (typeof(T) != body.Type)
             {
                 body = Expression.Convert(body, typeof(T));
             }
@@ -147,7 +148,9 @@ namespace MacroRunner.Compiler
                 case ExpressionType.Multiply:
                 case ExpressionType.Subtract:
                 case ExpressionType.GreaterThan:
+                case ExpressionType.GreaterThanOrEqual:
                 case ExpressionType.LessThan:
+                case ExpressionType.LessThanOrEqual:
                 case ExpressionType.Equal:
                 case ExpressionType.NotEqual:
                     return MakeOperationCall(expressionType.ToString(), arg1, arg2);
@@ -210,7 +213,7 @@ namespace MacroRunner.Compiler
 
         private (int Score, Expression Arg) MatchArgs(Type paramType, Expression arg)
         {
-            var argType = GetExpressionType(arg);
+            var argType = arg.Type;
             if (paramType == argType)
             {
                 return (1, arg);
@@ -228,14 +231,14 @@ namespace MacroRunner.Compiler
 
             if (paramType == typeof(bool) && argType == typeof(double))
             {
-                return (2, Expression.GreaterThan(arg, Expression.Constant(0m)));
+                return (2, Expression.GreaterThan(arg, Expression.Constant(0d)));
             }
-            
+
             if (paramType == typeof(int) && argType == typeof(bool))
             {
                 return (2, Expression.Convert(arg, paramType));
             }
-            
+
             if (paramType == typeof(double) && argType == typeof(bool))
             {
                 return (2, Expression.Convert(arg, paramType));
@@ -245,13 +248,5 @@ namespace MacroRunner.Compiler
 
             return (0, arg);
         }
-
-        private static Type GetExpressionType(Expression exp) =>
-            exp switch
-            {
-                MethodCallExpression mce => mce.Type,
-                ConstantExpression ce => ce.Type,
-                _ => throw new ParseException("Unsupported expression")
-            };
     }
 }

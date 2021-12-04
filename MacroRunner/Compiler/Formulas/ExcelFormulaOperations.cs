@@ -27,6 +27,14 @@ namespace MacroRunner.Compiler.Formulas
         public static bool LessThan(int a, int b) => a < b;
 
         public static bool LessThan(double a, double b) => a < b;
+        
+        public static bool GreaterThanOrEqual(int a, int b) => a >= b;
+
+        public static bool GreaterThanOrEqual(double a, double b) => a >= b;
+
+        public static bool LessThanOrEqual(int a, int b) => a <= b;
+
+        public static bool LessThanOrEqual(double a, double b) => a <= b;
 
         public static bool Equal(int a, int b) => a == b;
 
