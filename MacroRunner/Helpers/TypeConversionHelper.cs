@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace MacroRunner.Helpers;
 
@@ -11,7 +10,11 @@ public class TypeConversionHelper
     {
         var leftTypeId = FindTypeId(left.Type);
         var rightTypeId = FindTypeId(right.Type);
-        var minTypeId = FindTypeId(MinimumTypeForOperation[op]);
+        if (!MinimumTypeForOperation.TryGetValue(op, out var minType))
+        {
+            throw new($"Operation {op} is not supported yet");
+        }
+        var minTypeId = FindTypeId(minType);
 
         var typeId = Math.Max(Math.Max(leftTypeId, rightTypeId), minTypeId);
         var leftExp = GetTypeConversion(leftTypeId, typeId, left);
@@ -53,13 +56,13 @@ public class TypeConversionHelper
     private static Func<Expression, Expression?>[,] TypeConversionMap = new Func<Expression, Expression?>[,]
     {
         //from string
-        { e => e, e => Parse<bool>(e), e => Parse<int>(e), e => Parse<double>(e), e => Convert<object>(e) },
+        { e => e, e => Parse<bool>(e), e => Parse<int>(e), e => Parse<double>(e), e => TypeAs<object>(e) },
         // from bool
-        { e => ToString<bool>(e), e => e, e => Convert<int>(e), e => Convert<double>(e), e => null },
+        { e => ToString<bool>(e), e => e, e => Convert<int>(e), e => Convert<double>(e), e => TypeAs<object>(e) },
         // from int
-        { e => ToString<int>(e), e => GreaterThanZero<int>(e), e => e, e => Convert<double>(e), e => null },
+        { e => ToString<int>(e), e => GreaterThanZero<int>(e), e => e, e => Convert<double>(e), e => TypeAs<object>(e) },
         // from double
-        { e => ToString<double>(e), e => GreaterThanZero<double>(e), e => Convert<int>(e), e => e, e => null },
+        { e => ToString<double>(e), e => GreaterThanZero<double>(e), e => Convert<int>(e), e => e, e => TypeAs<object>(e) },
         // from object
         { e => ToString<object>(e), e => Convert<bool>(e), e => Convert<int>(e), e => Convert<double>(e), e => e },
     };
@@ -67,6 +70,7 @@ public class TypeConversionHelper
     private static Expression Parse<T>(Expression e) => Expression.Call(typeof(T), "Parse", null, e);
 
     private static Expression Convert<T>(Expression e) => Expression.Convert(e, typeof(T));
+    private static Expression TypeAs<T>(Expression e) => Expression.TypeAs(e, typeof(T));
 
     private static Expression ToString<T>(Expression e) => Expression.Call(e, "ToString", Type.EmptyTypes);
 
@@ -79,6 +83,7 @@ public class TypeConversionHelper
         { ExpressionType.Modulo, typeof(int) },
         { ExpressionType.Multiply, typeof(int) },
         { ExpressionType.Subtract, typeof(int) },
+        { ExpressionType.Power, typeof(double) },
         { ExpressionType.GreaterThan, typeof(int) },
         { ExpressionType.GreaterThanOrEqual, typeof(int) },
         { ExpressionType.LessThan, typeof(int) },

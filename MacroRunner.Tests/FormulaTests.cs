@@ -1,3 +1,4 @@
+using System;
 using FluentAssertions;
 using MacroRunner.Compiler;
 using Sprache;
@@ -12,6 +13,9 @@ public class FormulaTests
     [InlineData("-5+1", -4)]
     [InlineData("(1 > 0) + (3 = 3)", 2)]
     [InlineData("126 + 4.5", 130)]
+    [InlineData("5^2", 25)]
+    [InlineData("5^2+1", 26)]
+    [InlineData("5^(2+1)", 125)]
     public void ShouldComputeSimpleIntMath(string exp, int result) => RunTest(exp, result);
 
     [Theory]
@@ -23,9 +27,16 @@ public class FormulaTests
     [InlineData("(1 > 0) + 3.3", 4.3)]
     public void ShouldComputeSimpleDoubleMath(string exp, double result) => RunTest(exp, result, 1e-15);
 
-    [Fact]
-    public void ShouldConcatAutoConvertTwoStringsAndCompute() => RunTest("\"5\" + \"3\"", "8");
+    [Theory]
+    [InlineData("\"5\" + \"3\"", "8")]
+    public void ShouldConcatAutoConvertTwoStringsAndCompute(string exp, string result) => RunTest(exp, result);
 
+    [Theory]
+    [InlineData("\"5\" & \"3\"", "53")]
+    [InlineData("5 & 3", "53")]
+    public void ShouldPerformStringConcat(string exp, string result) => RunTest(exp, result);
+
+    
     [Theory]
     [InlineData("len(\"abc\")", 3)]
     public void ShouldCallFunctionAndReturnInt(string exp, int result) => RunTest(exp, result);
@@ -56,9 +67,11 @@ public class FormulaTests
     [Fact]
     public void ShouldNotSubtractTwoStrings()
     {
-        var exception = Assert.Throws<ParseException>(() => CreateParser().ParseExpression<dynamic>("\"aaaa\" - \"bbb\""));
+        var parsed = CreateParser().ParseExpression<dynamic>("\"aaaa\" - \"bbb\"");
+        var func = parsed.Compile();
+        var exception = Assert.Throws<FormatException>(() => func());
 
-        Assert.Contains("Function 'Subtract(String, String)' does not exist.", exception.Message);
+        Assert.Contains("Input string was not in a correct format", exception.Message);
     }
 
     #region helpers

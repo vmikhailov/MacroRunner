@@ -7,7 +7,6 @@ using MacroRunner.Compiler.Formulas;
 using MacroRunner.Helpers;
 using MacroRunner.Runtime;
 using MacroRunner.Runtime.Excel;
-using MoreLinq;
 using Sprache;
 using ExcelRange = MacroRunner.Runtime.Excel.Range;
 
@@ -47,18 +46,19 @@ namespace MacroRunner.Compiler
             from second in Parse.LetterOrDigit.Many().Text()
             select first + second;
 
-        private static Parser<ExpressionType> Add = Operator("+", ExpressionType.Add);
-        private static Parser<ExpressionType> Subtract = Operator("-", ExpressionType.Subtract);
-        private static Parser<ExpressionType> Multiply = Operator("*", ExpressionType.Multiply);
-        private static Parser<ExpressionType> Divide = Operator("/", ExpressionType.Divide);
-        private static Parser<ExpressionType> Modulo = Operator("%", ExpressionType.Modulo);
-        private static Parser<ExpressionType> Power = Operator("^", ExpressionType.Power);
-        private static Parser<ExpressionType> GreaterThan = Operator(">", ExpressionType.GreaterThan);
-        private static Parser<ExpressionType> GreaterThanOrEqual = Operator(">=", ExpressionType.GreaterThanOrEqual);
-        private static Parser<ExpressionType> LessThan = Operator("<", ExpressionType.LessThan);
-        private static Parser<ExpressionType> LessThanOrEqual = Operator("<=", ExpressionType.LessThanOrEqual);
-        private static Parser<ExpressionType> Equal = Operator("=", ExpressionType.Equal);
-        private static Parser<ExpressionType> NotEqual = Operator("<>", ExpressionType.NotEqual);
+        private static Parser<OperatorType> Add = Operator("+", OperatorType.Add);
+        private static Parser<OperatorType> Subtract = Operator("-", OperatorType.Subtract);
+        private static Parser<OperatorType> Multiply = Operator("*", OperatorType.Multiply);
+        private static Parser<OperatorType> Divide = Operator("/", OperatorType.Divide);
+        private static Parser<OperatorType> Modulo = Operator("%", OperatorType.Modulo);
+        private static Parser<OperatorType> Power = Operator("^", OperatorType.Power);
+        private static Parser<OperatorType> GreaterThan = Operator(">", OperatorType.GreaterThan);
+        private static Parser<OperatorType> GreaterThanOrEqual = Operator(">=", OperatorType.GreaterThanOrEqual);
+        private static Parser<OperatorType> LessThan = Operator("<", OperatorType.LessThan);
+        private static Parser<OperatorType> LessThanOrEqual = Operator("<=", OperatorType.LessThanOrEqual);
+        private static Parser<OperatorType> Equal = Operator("=", OperatorType.Equal);
+        private static Parser<OperatorType> NotEqual = Operator("<>", OperatorType.NotEqual);
+        private static Parser<OperatorType> Concatenate = Operator("&", OperatorType.StringConcat);
 
         private Parser<Expression> Function =>
             from name in Identifier
@@ -105,7 +105,7 @@ namespace MacroRunner.Compiler
 
         private Parser<Expression> Term => Parse.ChainOperator(Multiply.Or(Divide).Or(Modulo), InnerTerm, MakeBinary);
 
-        private Parser<Expression> MathExpression => Parse.ChainOperator(Add.Or(Subtract), Term, MakeBinary);
+        private Parser<Expression> MathExpression => Parse.ChainOperator(Add.Or(Subtract).Or(Concatenate), Term, MakeBinary);
 
         private Parser<Expression> LogicalExpression => Comparision.Or(MathExpression);
 
@@ -121,7 +121,7 @@ namespace MacroRunner.Compiler
         {
             if (typeof(T) != body.Type)
             {
-                body = TypeConversionHelper.GetTypeConversion(body.Type, typeof(T), body);
+                body = TypeConversionHelper.GetTypeConversion(body.Type, typeof(T), body)!;
             }
 
             return Expression.Lambda<Func<T>>(body);
@@ -134,32 +134,28 @@ namespace MacroRunner.Compiler
             return str;
         }
 
-        private static Parser<ExpressionType> Operator(string op, ExpressionType opType)
-        {
-            return Parse.String(op).Token().Return(opType);
-        }
+        private static Parser<OperatorType> Operator(string op, OperatorType opType) =>
+            Parse.String(op).Token().Return(opType);
 
-        private Expression MakeBinary(ExpressionType expressionType, Expression left, Expression right)
-        {
-            var (leftArg, rightArg) = TypeConversionHelper.FindBestMinimalMatchingType(left, right, expressionType);
+        private static Parser<Func<T, T, T>> Operator<T>(string op, Func<T, T, T> opMethod) =>
+            Parse.String(op).Token().Return(opMethod);
 
-            return expressionType switch
+        private Expression MakeBinary(OperatorType operatorType, Expression left, Expression right)
+        {
+            if(OperatorToExpressionMap.TryGetValue(operatorType, out var exp))
             {
-                ExpressionType.Add => Expression.Add(leftArg, rightArg),
-                ExpressionType.Divide => Expression.Divide(leftArg, rightArg),
-                ExpressionType.Modulo => Expression.Modulo(leftArg, rightArg),
-                ExpressionType.Multiply => Expression.Multiply(leftArg, rightArg),
-                ExpressionType.Subtract => Expression.Subtract(leftArg, rightArg),
-                ExpressionType.GreaterThan => Expression.GreaterThan(leftArg, rightArg),
-                ExpressionType.GreaterThanOrEqual => Expression.GreaterThanOrEqual(leftArg, rightArg),
-                ExpressionType.LessThan => Expression.LessThan(leftArg, rightArg),
-                ExpressionType.LessThanOrEqual => Expression.LessThanOrEqual(leftArg, rightArg),
-                ExpressionType.Equal => Expression.Equal(leftArg, rightArg),
-                ExpressionType.NotEqual => Expression.NotEqual(leftArg, rightArg),
-                _ => throw new NotImplementedException($"Expression of type {expressionType} is not supported yet")
-            };
+                var (leftArg, rightArg) = TypeConversionHelper.FindBestMinimalMatchingType(left, right, exp.type);
+                return exp.factory(leftArg, rightArg);
+            }
+            
+            if(OperatorToFunctionMap.TryGetValue(operatorType, out var name))
+            {
+                return MakeFunctionCall(name, left, right);
+            }
+
+            throw new ParseException($"Unknown operator {operatorType}");
         }
-        
+
         private static Expression MakeVariableAccess(string name)
         {
             var prop = typeof(ExcelFormulaConstants).GetPublicStaticProperty(name);
@@ -171,7 +167,7 @@ namespace MacroRunner.Compiler
             return Expression.Constant(prop.GetValue(null));
         }
 
-        private Expression MakeFunctionCall(string name, Expression[] args) => MakeCall(typeof(ExcelFormulaFunctions), name, args);
+        private Expression MakeFunctionCall(string name, params Expression[] args) => MakeCall(typeof(ExcelFormulaFunctions), name, args);
 
         private Expression MakeCall(Type impl, string name, params Expression[] args)
         {
@@ -219,5 +215,27 @@ namespace MacroRunner.Compiler
             var conversion = TypeConversionHelper.GetTypeConversion(argType, paramType, arg);
             return conversion != null ? (2, conversion) : (0, arg);
         }
+
+        private static IDictionary<OperatorType, (ExpressionType type, Func<Expression, Expression, Expression> factory) > OperatorToExpressionMap = 
+            new Dictionary<OperatorType, (ExpressionType, Func<Expression, Expression, Expression>)>()
+        {
+            { OperatorType.Add, (ExpressionType.Add, (l, r) => Expression.Add(l, r)) },
+            { OperatorType.Divide, (ExpressionType.Divide, (l, r) => Expression.Divide(l, r)) },
+            { OperatorType.Modulo, (ExpressionType.Modulo, (l, r) => Expression.Modulo(l, r))  },
+            { OperatorType.Multiply, (ExpressionType.Multiply, (l, r) => Expression.Multiply(l, r))  },
+            { OperatorType.Subtract, (ExpressionType.Subtract, (l, r) => Expression.Subtract(l, r))  },
+            { OperatorType.Power, (ExpressionType.Power, (l, r) => Expression.Power(l, r))  },
+            { OperatorType.GreaterThan, (ExpressionType.GreaterThan, (l, r) => Expression.GreaterThan(l, r)) },
+            { OperatorType.GreaterThanOrEqual, (ExpressionType.GreaterThanOrEqual, (l, r) => Expression.GreaterThanOrEqual(l, r)) },
+            { OperatorType.LessThan, (ExpressionType.LessThan, (l, r) => Expression.LessThan(l, r)) },
+            { OperatorType.LessThanOrEqual, (ExpressionType.LessThanOrEqual, (l, r) => Expression.LessThanOrEqual(l, r)) },
+            { OperatorType.Equal, (ExpressionType.Equal, (l, r) => Expression.Equal(l, r)) },
+            { OperatorType.NotEqual, (ExpressionType.NotEqual, (l, r) => Expression.NotEqual(l, r)) },
+        };
+
+        private static IDictionary<OperatorType, string> OperatorToFunctionMap = new Dictionary<OperatorType, string>()
+        {
+            { OperatorType.StringConcat, "Concat" },
+        };
     }
 }
