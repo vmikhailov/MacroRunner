@@ -27,15 +27,14 @@ public class FormulaTests
     public void ShouldConcatTwoStrings() => RunTest("\"aaaa\" + \"bbb\"", "aaaabbb");
 
     [Theory]
+    [InlineData("len(\"abc\")", 3)]
+    public void ShouldCallFunctionAndReturnInt(string exp, int result) => RunTest(exp, result);
+    
+    [Theory]
+    [InlineData("trim(\" abc \")", "abc")]
     [InlineData("text(sqrt(4))", "2")]
     [InlineData("text(sqrt(4), \"0000\")", "0002")]
-    public void ShouldComputeScalarFunctionAndConvertToString(string exp, string result)
-    {
-        var parsed = CreateParser().ParseExpression<string>(exp);
-        var func = parsed.Compile();
-
-        func().Should().Be(result);
-    }
+    public void ShouldCallFunctionAndReturnString(string exp, string result) => RunTest(exp, result);
 
     [Theory]
     [InlineData("(1 + 3) > 0", true)]
@@ -53,6 +52,16 @@ public class FormulaTests
     [InlineData("1.3 >= (3 + 2) * 34.1", false)]
     [InlineData("200 >= (3 + 2) * 34.1", true)]
     public void ShouldComputeComparision(string exp, bool result) => RunTest(exp, result);
+
+    [Fact]
+    public void ShouldNotSubtractTwoStrings()
+    {
+        var exception = Assert.Throws<ParseException>(() => CreateParser().ParseExpression<dynamic>("\"aaaa\" - \"bbb\""));
+
+        Assert.Contains("Function 'Subtract(String, String)' does not exist.", exception.Message);
+    }
+
+    #region helpers
 
     private static FormulaParser CreateParser() => new(new() { ParametersDelimiter = ',' });
 
@@ -72,12 +81,5 @@ public class FormulaTests
         func().Should().BeApproximately(result, precision);
     }
 
-
-    [Fact]
-    public void ShouldNotSubtractTwoStrings()
-    {
-        var exception = Assert.Throws<ParseException>(() => CreateParser().ParseExpression<dynamic>("\"aaaa\" - \"bbb\""));
-
-        Assert.Contains("Function 'Subtract(String, String)' does not exist.", exception.Message);
-    }
+    #endregion
 }
