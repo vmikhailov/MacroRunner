@@ -6,7 +6,7 @@ namespace MacroRunner.Runtime;
 
 public class RangeFactory
 {
-    public static Range Create(IEnumerable<Address> addresses)
+    public static Range? Create(IEnumerable<Address> addresses)
     {
         var adr = addresses.ToArray();
         return adr.Length switch

@@ -1,6 +1,5 @@
 using System;
-using MacroRunner.Runtime.Excel;
-using MacroRunner.Runtime.Excel.Cells;
+using MacroRunner.Runtime;
 
 namespace MacroRunner.Compiler;
 

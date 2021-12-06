@@ -13,13 +13,24 @@ using ExcelRange = MacroRunner.Runtime.Excel.Range;
 
 namespace MacroRunner.Compiler;
 
-public class FormulaParser
+public class FormulaParser : IParserContext
 {
     private readonly FormulaParserSettings _settings;
 
-    public FormulaParser() => _settings = new();
+    public IDictionary<string, ParameterExpression> Parameters { get; } =
+        new Dictionary<string, ParameterExpression>(StringComparer.InvariantCultureIgnoreCase);
 
-    public FormulaParser(FormulaParserSettings settings) => _settings = settings;
+    public ParameterExpression ExecutionContextParameter { get; set;  }
+
+    public FormulaParser() : this(new())
+    {
+    }
+
+    public FormulaParser(FormulaParserSettings settings)
+    {
+        ExecutionContextParameter = Expression.Parameter(typeof(IExecutionContext), "context");
+        _settings = settings;
+    }
 
     public Expression<Func<T>> ParseExpression<T>(string text) => GetLambda<T>().Parse(text);
 
@@ -63,7 +74,7 @@ public class FormulaParser
     private Parser<Expression> Function =>
         from name in Identifier
         from lparen in Parse.Char('(')
-        from expr in Parse.Ref(() => MathExpression).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
+        from expr in Parse.Ref(() => LogicalExpression).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
         from rparen in Parse.Char(')')
         select MakeFunctionCall(name, expr.ToArray());
 
@@ -107,21 +118,23 @@ public class FormulaParser
 
     private Parser<Expression> MathExpression => Parse.ChainOperator(Add.Or(Subtract).Or(Concatenate), Term, MakeBinary);
 
-    private Parser<Expression> LogicalExpression => Comparision.Or(MathExpression);
+    private Parser<Expression> LogicalExpression =>
+        from exp in MathExpression
+        from tail in ComparisionTail.Optional()
+        select tail.IsDefined ? MakeBinary(tail.Get().op, exp, tail.Get().exp) : exp;
 
-    private Parser<Expression> Comparision =>
-        from exp1 in MathExpression
+    private Parser<(OperatorType op, Expression exp)> ComparisionTail =>
         from op in NotEqual.Or(LessThanOrEqual).Or(LessThan).XOr(GreaterThanOrEqual.Or(GreaterThan).Or(Equal))
-        from exp2 in MathExpression
-        select MakeBinary(op, exp1, exp2);
+        from exp in MathExpression
+        select (op, exp);
 
     private Parser<Expression<Func<T>>> GetLambda<T>() => LogicalExpression.End().Select(TypeCast<T>);
 
-    private static Expression<Func<T>> TypeCast<T>(Expression body)
+    private Expression<Func<T>> TypeCast<T>(Expression body)
     {
         if (typeof(T) != body.Type)
         {
-            body = TypeConversionHelper.GetTypeConversion(body.Type, typeof(T), body)!;
+            body = TypeConversionHelper.GetTypeConversion(this, body.Type, typeof(T), body)!;
         }
 
         return Expression.Lambda<Func<T>>(body);
@@ -129,26 +142,23 @@ public class FormulaParser
 
     private static object ParseConstant(string str)
     {
-        if (int.TryParse(str, out var intValue)) 
+        if (int.TryParse(str, out var intValue))
             return intValue;
-        
+
         if (double.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out var decValue))
             return decValue;
-        
+
         return str;
     }
 
     private static Parser<OperatorType> Operator(string op, OperatorType opType) =>
         Parse.String(op).Token().Return(opType);
 
-    private static Parser<Func<T, T, T>> Operator<T>(string op, Func<T, T, T> opMethod) =>
-        Parse.String(op).Token().Return(opMethod);
-
     private Expression MakeBinary(OperatorType operatorType, Expression left, Expression right)
     {
         if (OperatorToExpressionMap.TryGetValue(operatorType, out var exp))
         {
-            var (leftArg, rightArg) = TypeConversionHelper.FindBestMinimalMatchingType(left, right, exp.type);
+            var (leftArg, rightArg) = TypeConversionHelper.FindMinimalMatchingType(this, left, right, exp.type);
             return exp.factory(leftArg, rightArg);
         }
 
@@ -160,12 +170,20 @@ public class FormulaParser
         throw new ParseException($"Unknown operator {operatorType}");
     }
 
-    private static Expression MakeVariableAccess(string name)
+    private Expression MakeVariableAccess(string name)
     {
         var prop = typeof(ExcelFormulaConstants).GetPublicStaticProperty(name);
         if (prop == null)
         {
-            throw new ParseException(string.Format("Variable or constant '{0}' does not exist.", name));
+            //if (!Parameters.TryGetValue(name, out var exp))
+            //{
+            var exp = Expression.Call(ExecutionContextParameter, "GetNamedValue", null, Expression.Constant(name));
+                //exp = Expression.(typeof(object), "x");
+                //Parameters[name] = exp;
+            //}
+
+            return exp;
+            //throw new ParseException(string.Format("Variable or constant '{0}' does not exist.", name));
         }
 
         return Expression.Constant(prop.GetValue(null));
@@ -216,7 +234,7 @@ public class FormulaParser
             return (1, arg);
         }
 
-        var conversion = TypeConversionHelper.GetTypeConversion(argType, paramType, arg);
+        var conversion = TypeConversionHelper.GetTypeConversion(this, argType, paramType, arg);
         return conversion != null ? (2, conversion) : (0, arg);
     }
 

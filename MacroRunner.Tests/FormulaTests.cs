@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using FluentAssertions;
 using MacroRunner.Compiler;
 using Xunit;
@@ -63,6 +64,16 @@ public class FormulaTests
     [InlineData("200 >= (3 + 2) * 34.1", true)]
     public void ShouldComputeComparision(string exp, bool result) => RunTest(exp, result);
 
+    [Theory]
+    [InlineData("call(1+2)=3", 1)]
+    [InlineData("call(1+2)", 3)]
+    [InlineData("call(1,x+x+1)", 3)]
+    [InlineData("call(x+1)", 2)]
+    [InlineData("let(1,1,x+1)", 2)]
+    [InlineData("let(x,1,x+1)", 2)]
+    // [InlineData("LET(x,1,LET(y,2,x)+y)", 3)]
+    // [InlineData("LET(x,2,x^3)+LET(x,3,x^4)", 89)]
+    public void ShouldComputeLet(string exp, int result) => RunTest(exp, result);
 
     [Fact]
     public void ShouldNotSubtractTwoStrings()
@@ -78,6 +89,9 @@ public class FormulaTests
 
     private static void RunTest<T>(string exp, T result)
     {
+        var arr = new[] { 1 };
+        Expression<Func<object>> f = () => arr[0];
+        
         var parsed = new FormulaParser().ParseExpression<T>(exp);
         var func = parsed.Compile();
 

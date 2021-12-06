@@ -2,12 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
+using MacroRunner.Compiler;
+using MacroRunner.Runtime;
+using MacroRunner.Runtime.Excel;
 
 namespace MacroRunner.Helpers;
 
 public class TypeConversionHelper
 {
-    public static (Expression left, Expression right) FindBestMinimalMatchingType(Expression left, Expression right, ExpressionType op)
+    public static (Expression left, Expression right) FindMinimalMatchingType(
+        IParserContext context,
+        Expression left,
+        Expression right,
+        ExpressionType op)
     {
         var leftTypeId = FindTypeId(left.Type);
         var rightTypeId = FindTypeId(right.Type);
@@ -19,8 +26,8 @@ public class TypeConversionHelper
         var minTypeId = FindTypeId(minType);
 
         var typeId = Math.Max(Math.Max(leftTypeId, rightTypeId), minTypeId);
-        var leftExp = GetTypeConversion(leftTypeId, typeId, left);
-        var rightExp = GetTypeConversion(rightTypeId, typeId, right);
+        var leftExp = GetTypeConversion(context, leftTypeId, typeId, left);
+        var rightExp = GetTypeConversion(context, rightTypeId, typeId, right);
         if (leftExp == null || rightExp == null)
         {
             throw new($"Unable to find conversion between {left.Type} and {right.Type}");
@@ -29,19 +36,19 @@ public class TypeConversionHelper
         return (leftExp, rightExp);
     }
 
-    public static Expression? GetTypeConversion(Type sourceType, Type targetType, Expression exp)
+    public static Expression? GetTypeConversion(IParserContext context, Type sourceType, Type targetType, Expression exp)
     {
         var sourceTypeId = FindTypeId(sourceType);
         var targetTypeId = FindTypeId(targetType);
-        return GetTypeConversion(sourceTypeId, targetTypeId, exp);
+        return GetTypeConversion(context, sourceTypeId, targetTypeId, exp);
     }
 
-    private static Expression? GetTypeConversion(int sourceTypeId, int targetTypeId, Expression exp) =>
-        TypeConversionMap[sourceTypeId, targetTypeId](exp);
+    private static Expression? GetTypeConversion(IParserContext context, int sourceTypeId, int targetTypeId, Expression exp) =>
+        TypeConversionMap[sourceTypeId, targetTypeId](exp, context);
 
     private static int FindTypeId(Type type)
     {
-        for (var i = 0; i < TypeOrder.Length; i++)
+        for (var i = TypeOrder.Length - 1; i >= 0; i--)
         {
             var x = TypeOrder[i];
             if (x == type || x.IsAssignableFrom(type))
@@ -53,20 +60,77 @@ public class TypeConversionHelper
         return -1;
     }
 
-    private static Type[] TypeOrder = new[] { typeof(string), typeof(bool), typeof(int), typeof(double), typeof(object) };
-
-    private static Func<Expression, Expression?>[,] TypeConversionMap = new Func<Expression, Expression?>[,]
+    private static Type[] TypeOrder = new[]
     {
-        //from string
-        { e => e, e => Parse<bool>(e), e => Parse<int>(e), e => Parse<double>(e), e => TypeAs<object>(e) },
-        // from bool
-        { e => ToString<bool>(e), e => e, e => Convert<int>(e), e => Convert<double>(e), e => TypeAs<object>(e) },
-        // from int
-        { e => ToString<int>(e), e => GreaterThanZero<int>(e), e => e, e => Convert<double>(e), e => TypeAs<object>(e) },
-        // from double
-        { e => ToString<double>(e), e => GreaterThanZero<double>(e), e => Convert<int>(e), e => e, e => TypeAs<object>(e) },
+        typeof(object),
+        typeof(string),
+        typeof(bool),
+        typeof(int),
+        typeof(double),
+        typeof(Func<IExecutionContext, object>)
+    };
+
+    private static Func<Expression, IParserContext, Expression?>[,] TypeConversionMap = 
+        new Func<Expression, IParserContext, Expression?>[,]
+    {
         // from object
-        { e => ToString<object>(e), e => Convert<bool>(e), e => Convert<int>(e), e => Convert<double>(e), e => e },
+        {
+            (e, c) => e,
+            (e, c) => ToString<object>(e),
+            (e, c) => Convert<bool>(e),
+            (e, c) => Convert<int>(e),
+            (e, c) => Convert<double>(e),
+            (e, c) => ToLambda<object>(e, c)
+        },
+
+        //from string
+        {
+            (e, c) => Convert<object>(e),
+            (e, c) => e,
+            (e, c) => Parse<bool>(e),
+            (e, c) => Parse<int>(e),
+            (e, c) => Parse<double>(e),
+            (e, c) => ToLambda<object>(e, c)
+        },
+
+        // from bool
+        {
+            (e, c) => Convert<object>(e),
+            (e, c) => ToString<bool>(e),
+            (e, c) => e,
+            (e, c) => Convert<int>(e),
+            (e, c) => Convert<double>(e),
+            (e, c) => ToLambda<object>(e, c)
+        },
+
+        // from int
+        {
+            (e, c) => Convert<object>(e),
+            (e, c) => ToString<int>(e),
+            (e, c) => GreaterThanZero<int>(e),
+            (e, c) => e,
+            (e, c) => Convert<double>(e),
+            (e, c) => ToLambda<object>(e, c)
+        },
+
+        // from double
+        {
+            (e, c) => Convert<object>(e),
+            (e, c) => ToString<double>(e),
+            (e, c) => GreaterThanZero<double>(e),
+            (e, c) => Convert<int>(e),
+            (e, c) => e,
+            (e, c) => ToLambda<object>(e, c)
+        },
+
+        {
+            (e, c) => null,
+            (e, c) => null,
+            (e, c) => null,
+            (e, c) => null,
+            (e, c) => null,
+            (e, c) => null
+        }
     };
 
     private static Expression Parse<T>(Expression e) =>
@@ -79,6 +143,26 @@ public class TypeConversionHelper
     private static Expression ToString<T>(Expression e) => Expression.Call(e, "ToString", Type.EmptyTypes);
 
     private static Expression GreaterThanZero<T>(Expression e) => Expression.GreaterThan(e, Expression.Constant(default(T)));
+
+    private static Expression ToLambda<T>(Expression e, IParserContext context)
+    {
+        var p1 = Expression.Parameter(typeof(int), "a");
+
+        var l1 = Expression.Lambda<Func<int, int>>(Expression.Add(p1, Expression.Constant(1)), p1);
+        var l2 = Expression.Lambda<Func<int, int>>(Expression.Add(p1, Expression.Constant(2)), p1);
+
+        var f1 = l1.Compile();
+        var f2 = l2.Compile();
+        var v1 = f1(1);
+        var v2 = f2(2);
+        
+        
+        var body = Expression.Convert(e, typeof(object));
+        var lambda = Expression.Lambda<Func<IExecutionContext, object>>(body, context.ExecutionContextParameter);
+        //return lambda;
+        var func = lambda.Compile();
+        return Expression.Constant(func);
+    }
 
     private static IDictionary<ExpressionType, Type> MinimumTypeForOperation = new Dictionary<ExpressionType, Type>()
     {

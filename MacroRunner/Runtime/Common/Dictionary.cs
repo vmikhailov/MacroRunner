@@ -2,7 +2,7 @@
 
 namespace MacroRunner.Runtime.Common;
 
-public class Dictionary : Hashtable
+public class Dictionary1 : Hashtable
 {
     public bool Exists(object value)
     {
