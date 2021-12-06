@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq.Expressions;
 
 namespace MacroRunner.Helpers;
@@ -14,6 +15,7 @@ public class TypeConversionHelper
         {
             throw new($"Operation {op} is not supported yet");
         }
+
         var minTypeId = FindTypeId(minType);
 
         var typeId = Math.Max(Math.Max(leftTypeId, rightTypeId), minTypeId);
@@ -34,7 +36,7 @@ public class TypeConversionHelper
         return GetTypeConversion(sourceTypeId, targetTypeId, exp);
     }
 
-    private static Expression? GetTypeConversion(int sourceTypeId, int targetTypeId, Expression exp) => 
+    private static Expression? GetTypeConversion(int sourceTypeId, int targetTypeId, Expression exp) =>
         TypeConversionMap[sourceTypeId, targetTypeId](exp);
 
     private static int FindTypeId(Type type)
@@ -67,9 +69,11 @@ public class TypeConversionHelper
         { e => ToString<object>(e), e => Convert<bool>(e), e => Convert<int>(e), e => Convert<double>(e), e => e },
     };
 
-    private static Expression Parse<T>(Expression e) => Expression.Call(typeof(T), "Parse", null, e);
+    private static Expression Parse<T>(Expression e) =>
+        Expression.Call(typeof(T), "Parse", null, e, Expression.Constant(CultureInfo.InvariantCulture));
 
     private static Expression Convert<T>(Expression e) => Expression.Convert(e, typeof(T));
+
     private static Expression TypeAs<T>(Expression e) => Expression.TypeAs(e, typeof(T));
 
     private static Expression ToString<T>(Expression e) => Expression.Call(e, "ToString", Type.EmptyTypes);

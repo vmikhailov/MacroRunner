@@ -63,6 +63,7 @@ public class FormulaTests
     [InlineData("200 >= (3 + 2) * 34.1", true)]
     public void ShouldComputeComparision(string exp, bool result) => RunTest(exp, result);
 
+
     [Fact]
     public void ShouldNotSubtractTwoStrings()
     {
