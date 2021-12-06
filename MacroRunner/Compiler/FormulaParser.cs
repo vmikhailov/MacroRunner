@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -128,8 +129,12 @@ public class FormulaParser
 
     private static object ParseConstant(string str)
     {
-        if (int.TryParse(str, out var intValue)) return intValue;
-        if (double.TryParse(str, out var decValue)) return decValue;
+        if (int.TryParse(str, out var intValue)) 
+            return intValue;
+        
+        if (double.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out var decValue))
+            return decValue;
+        
         return str;
     }
 
