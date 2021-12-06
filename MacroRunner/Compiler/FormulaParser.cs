@@ -74,7 +74,7 @@ public class FormulaParser
         select Expression.Constant(content);
 
     private Parser<Expression> Constant =>
-        Parse.Decimal
+        Parse.DecimalInvariant
              .Select(x => Expression.Constant(ParseConstant(x)))
              .Or(StringConstant);
 
