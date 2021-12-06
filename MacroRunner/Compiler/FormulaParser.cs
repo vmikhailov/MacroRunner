@@ -16,10 +16,9 @@ public class FormulaParser
 {
     private readonly FormulaParserSettings _settings;
 
-    public FormulaParser(FormulaParserSettings settings)
-    {
-        _settings = settings;
-    }
+    public FormulaParser() => _settings = new();
+
+    public FormulaParser(FormulaParserSettings settings) => _settings = settings;
 
     public Expression<Func<T>> ParseExpression<T>(string text) => GetLambda<T>().Parse(text);
 
@@ -142,13 +141,13 @@ public class FormulaParser
 
     private Expression MakeBinary(OperatorType operatorType, Expression left, Expression right)
     {
-        if(OperatorToExpressionMap.TryGetValue(operatorType, out var exp))
+        if (OperatorToExpressionMap.TryGetValue(operatorType, out var exp))
         {
             var (leftArg, rightArg) = TypeConversionHelper.FindBestMinimalMatchingType(left, right, exp.type);
             return exp.factory(leftArg, rightArg);
         }
-            
-        if(OperatorToFunctionMap.TryGetValue(operatorType, out var name))
+
+        if (OperatorToFunctionMap.TryGetValue(operatorType, out var name))
         {
             return MakeFunctionCall(name, left, right);
         }
@@ -216,15 +215,15 @@ public class FormulaParser
         return conversion != null ? (2, conversion) : (0, arg);
     }
 
-    private static IDictionary<OperatorType, (ExpressionType type, Func<Expression, Expression, Expression> factory) > OperatorToExpressionMap = 
+    private static IDictionary<OperatorType, (ExpressionType type, Func<Expression, Expression, Expression> factory)> OperatorToExpressionMap =
         new Dictionary<OperatorType, (ExpressionType, Func<Expression, Expression, Expression>)>()
         {
             { OperatorType.Add, (ExpressionType.Add, (l, r) => Expression.Add(l, r)) },
             { OperatorType.Divide, (ExpressionType.Divide, (l, r) => Expression.Divide(l, r)) },
-            { OperatorType.Modulo, (ExpressionType.Modulo, (l, r) => Expression.Modulo(l, r))  },
-            { OperatorType.Multiply, (ExpressionType.Multiply, (l, r) => Expression.Multiply(l, r))  },
-            { OperatorType.Subtract, (ExpressionType.Subtract, (l, r) => Expression.Subtract(l, r))  },
-            { OperatorType.Power, (ExpressionType.Power, (l, r) => Expression.Power(l, r))  },
+            { OperatorType.Modulo, (ExpressionType.Modulo, (l, r) => Expression.Modulo(l, r)) },
+            { OperatorType.Multiply, (ExpressionType.Multiply, (l, r) => Expression.Multiply(l, r)) },
+            { OperatorType.Subtract, (ExpressionType.Subtract, (l, r) => Expression.Subtract(l, r)) },
+            { OperatorType.Power, (ExpressionType.Power, (l, r) => Expression.Power(l, r)) },
             { OperatorType.GreaterThan, (ExpressionType.GreaterThan, (l, r) => Expression.GreaterThan(l, r)) },
             { OperatorType.GreaterThanOrEqual, (ExpressionType.GreaterThanOrEqual, (l, r) => Expression.GreaterThanOrEqual(l, r)) },
             { OperatorType.LessThan, (ExpressionType.LessThan, (l, r) => Expression.LessThan(l, r)) },

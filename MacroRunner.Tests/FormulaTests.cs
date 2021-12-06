@@ -1,7 +1,6 @@
 using System;
 using FluentAssertions;
 using MacroRunner.Compiler;
-using Sprache;
 using Xunit;
 
 namespace MacroRunner.Tests;
@@ -67,7 +66,7 @@ public class FormulaTests
     [Fact]
     public void ShouldNotSubtractTwoStrings()
     {
-        var parsed = CreateParser().ParseExpression<dynamic>("\"aaaa\" - \"bbb\"");
+        var parsed = new FormulaParser().ParseExpression<dynamic>("\"aaaa\" - \"bbb\"");
         var func = parsed.Compile();
         var exception = Assert.Throws<FormatException>(() => func());
 
@@ -76,11 +75,9 @@ public class FormulaTests
 
     #region helpers
 
-    private static FormulaParser CreateParser() => new(new() { ParametersDelimiter = ',' });
-
     private static void RunTest<T>(string exp, T result)
     {
-        var parsed = CreateParser().ParseExpression<T>(exp);
+        var parsed = new FormulaParser().ParseExpression<T>(exp);
         var func = parsed.Compile();
 
         func().Should().Be(result);
@@ -88,7 +85,7 @@ public class FormulaTests
 
     private static void RunTest(string exp, double result, double precision)
     {
-        var parsed = CreateParser().ParseExpression<double>(exp);
+        var parsed = new FormulaParser().ParseExpression<double>(exp);
         var func = parsed.Compile();
 
         func().Should().BeApproximately(result, precision);

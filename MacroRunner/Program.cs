@@ -13,7 +13,8 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        var parser = new FormulaParser(new() { ParametersDelimiter = ',' });
+        ParseExcel();
+        var parser = new FormulaParser();
             
         // var addr1 = FormulaParser.Range.Parse("A1");
         // var addr2 = FormulaParser.Range.Parse("AAA1");
@@ -163,5 +164,8 @@ internal class Program
     {
         var exStream = ResourceHelper.GetResourceAsStream("MacroRunner.Samples.Excel.Book1.xlsm");
         var ex = new XLWorkbook(exStream);
+        var ws = ex.Worksheets.First();
+
+        var r = ws.Cell(1, 1);
     }
 }
