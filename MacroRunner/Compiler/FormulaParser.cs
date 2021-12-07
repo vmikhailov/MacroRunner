@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using MacroRunner.Compiler.Formulas;
 using MacroRunner.Helpers;
 using MacroRunner.Runtime;
@@ -20,7 +21,7 @@ public class FormulaParser : IParserContext
     public IDictionary<string, ParameterExpression> Parameters { get; } =
         new Dictionary<string, ParameterExpression>(StringComparer.InvariantCultureIgnoreCase);
 
-    public ParameterExpression ExecutionContextParameter { get; set;  }
+    public ParameterExpression ExecutionContextParameter { get; set; }
 
     public FormulaParser() : this(new())
     {
@@ -32,9 +33,7 @@ public class FormulaParser : IParserContext
         _settings = settings;
     }
 
-    public Expression<Func<T>> ParseExpression<T>(string text) => GetLambda<T>().Parse(text);
-
-    public static Parser<Address> Address =>
+    private static Parser<Address> Address =>
         from fixedColumn in Parse.String("$").Token().Optional()
         from columnName in Parse.Letter.Repeat(1, 3).Text()
         from fixedRow in Parse.String("$").Token().Optional()
@@ -47,7 +46,7 @@ public class FormulaParser : IParserContext
             FixedColumn = fixedColumn.IsDefined
         };
 
-    public static Parser<ExcelRange> Range =>
+    private static Parser<ExcelRange> Range =>
         from a in Address.Once()
         from b in Parse.Char(':').Then(_ => Address).Repeat(0, 1)
         select RangeFactory.Create(a.Concat(b));
@@ -73,7 +72,7 @@ public class FormulaParser : IParserContext
 
     private Parser<Expression> Function =>
         from name in Identifier
-        from lparen in Parse.Char('(').Named(name)
+        from lparen in Parse.Char('(')
         from expr in Parse.Ref(() => LogicalExpression).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
         from rparen in Parse.Char(')')
         select MakeFunctionCall(name, expr.ToArray());
@@ -104,7 +103,7 @@ public class FormulaParser : IParserContext
          select expr).Named("expression");
 
     private Parser<Expression> Factor =>
-        ExpressionInBraces.XOr(Constant.Or(Function).Or(Variable).Or(RangeExp));
+        ExpressionInBraces.Or(Constant).Or(Function).Or(Variable).Or(RangeExp);
 
     private Parser<Expression> Operand =>
         (from sign in Parse.Char('-')
@@ -124,20 +123,23 @@ public class FormulaParser : IParserContext
         select tail.IsDefined ? MakeBinary(tail.Get().op, exp, tail.Get().exp) : exp;
 
     private Parser<(OperatorType op, Expression exp)> ComparisionTail =>
-        from op in NotEqual.Or(LessThanOrEqual).Or(LessThan).XOr(GreaterThanOrEqual.Or(GreaterThan).Or(Equal))
+        from op in Equal.Or(NotEqual).Or(LessThanOrEqual).Or(LessThan).Or(GreaterThanOrEqual).Or(GreaterThan)
         from exp in MathExpression
         select (op, exp);
 
-    private Parser<Expression<Func<T>>> GetLambda<T>() => LogicalExpression.End().Select(TypeCast<T>);
+    public Expression<Func<IExecutionContext, T>> ParseExpression<T>(string text) => GetLambda<T>().Parse(text);
 
-    private Expression<Func<T>> TypeCast<T>(Expression body)
+    private Parser<Expression<Func<IExecutionContext, T>>> GetLambda<T>() =>
+        LogicalExpression.End().Select(TypeCast<T>);
+
+    private Expression<Func<IExecutionContext, T>> TypeCast<T>(Expression body)
     {
         if (typeof(T) != body.Type)
         {
             body = TypeConversionHelper.GetTypeConversion(this, body.Type, typeof(T), body)!;
         }
 
-        return Expression.Lambda<Func<T>>(body);
+        return Expression.Lambda<Func<IExecutionContext, T>>(body, ExecutionContextParameter);
     }
 
     private static object ParseConstant(string str)
@@ -175,10 +177,8 @@ public class FormulaParser : IParserContext
         var prop = typeof(ExcelFormulaConstants).GetPublicStaticProperty(name);
         if (prop == null)
         {
-            return Expression.Call(
-                ExecutionContextParameter, 
-                nameof(IExecutionContext.GetNamedValue), 
-                null, Expression.Constant(name));
+            var indexer = typeof(IExecutionContext).GetProperties().First(x => x.GetIndexParameters().Length > 0);
+            return Expression.MakeIndex(ExecutionContextParameter, indexer, new[] { Expression.Constant(name) });
         }
 
         return Expression.Constant(prop.GetValue(null));
@@ -188,7 +188,7 @@ public class FormulaParser : IParserContext
 
     private Expression MakeCall(Type impl, string name, params Expression[] args)
     {
-        var methodWithArgs = impl.GetPublicStaticMethods(name, args.Length)
+        var methodWithArgs = impl.GetPublicStaticMethods(name)
                                  .Select(x => new { Method = x, Match = MatchArgs(x.GetParameters(), args) })
                                  .Where(x => x.Match.Score > 0)
                                  .OrderBy(x => x.Match.Score)
@@ -209,13 +209,22 @@ public class FormulaParser : IParserContext
 
     private (int Score, Expression[] Args) MatchArgs(ParameterInfo[] parameters, Expression[] args)
     {
-        var newArgs = parameters.Zip(args)
+        // special handling for first argument IExecutionContext;
+        var addContext = parameters.First().ParameterType == typeof(IExecutionContext);
+
+        var newArgs = parameters.Skip(addContext ? 1 : 0)
+                                .Zip(args)
                                 .Select(x => MatchArgs(x.First.ParameterType, x.Second))
                                 .ToList();
 
-        if (newArgs.Any(x => x.Score == 0))
+        if (newArgs.Any(x => x.Score == 0) || newArgs.Count < args.Length)
         {
             return (0, args);
+        }
+
+        if (addContext)
+        {
+            newArgs.Insert(0, (0, ExecutionContextParameter));
         }
 
         return (newArgs.Select(x => x.Score).Sum(), newArgs.Select(x => x.Arg).ToArray());

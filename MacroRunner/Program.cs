@@ -53,13 +53,14 @@ internal class Program
         var fnc = parsed6.Compile();
         Console.WriteLine($"Compilation, Elapsed {sw.Elapsed}");
 
-        var xx = fnc();
+        var ctx = new FormulaExecutionContext();
+        var xx = fnc(ctx);
         var n = 0L;
         var ss = sw.Elapsed;
         var nn = 100_000_000;
         for (var i = 0; i < nn; i++)
         {
-            var x = fnc();
+            var x = fnc(ctx);
             n += (long)x;
         }
         Console.WriteLine($"Run {nn}, {n}, Mln Per second {nn/(sw.Elapsed-ss).TotalMilliseconds/1000:F5}");

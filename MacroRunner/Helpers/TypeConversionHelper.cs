@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Reflection;
 using MacroRunner.Compiler;
 using MacroRunner.Runtime;
-using MacroRunner.Runtime.Excel;
 
 namespace MacroRunner.Helpers;
 
@@ -71,79 +71,93 @@ public class TypeConversionHelper
         typeof(Expression)
     };
 
-    private static Func<Expression, IParserContext, Expression?>[,] TypeConversionMap = 
+    private static Func<Expression, IParserContext, Expression?>[,] TypeConversionMap =
         new Func<Expression, IParserContext, Expression?>[,]
-    {
-        // from object
         {
-            (e, c) => e,
-            (e, c) => ToString<object>(e),
-            (e, c) => Convert<bool>(e),
-            (e, c) => Convert<int>(e),
-            (e, c) => Convert<double>(e),
-            (e, c) => ToLambda<object>(e, c),
-            (e, c) => Expression.Constant(e)
-        },
+            // from object
+            {
+                (e, c) => e,
+                (e, c) => ToString<object>(e),
+                (e, c) => Convert<bool>(e),
+                (e, c) => Convert<int>(e),
+                (e, c) => Convert2<double>(e),
+                (e, c) => ToLambda<object>(e, c),
+                (e, c) => Expression.Constant(e)
+            },
 
-        //from string
-        {
-            (e, c) => Convert<object>(e),
-            (e, c) => e,
-            (e, c) => Parse<bool>(e),
-            (e, c) => Parse<int>(e),
-            (e, c) => Parse<double>(e),
-            (e, c) => ToLambda<object>(e, c),
-            (e, c) => Expression.Constant(e)
-        },
+            //from string
+            {
+                (e, c) => Convert<object>(e),
+                (e, c) => e,
+                (e, c) => Parse<bool>(e),
+                (e, c) => Parse<int>(e),
+                (e, c) => Parse<double>(e),
+                (e, c) => ToLambda<object>(e, c),
+                (e, c) => Expression.Constant(e)
+            },
 
-        // from bool
-        {
-            (e, c) => Convert<object>(e),
-            (e, c) => ToString<bool>(e),
-            (e, c) => e,
-            (e, c) => Convert<int>(e),
-            (e, c) => Convert<double>(e),
-            (e, c) => ToLambda<object>(e, c),
-            (e, c) => Expression.Constant(e)
-        },
+            // from bool
+            {
+                (e, c) => Convert<object>(e),
+                (e, c) => ToString<bool>(e),
+                (e, c) => e,
+                (e, c) => Convert<int>(e),
+                (e, c) => Convert<double>(e),
+                (e, c) => ToLambda<object>(e, c),
+                (e, c) => Expression.Constant(e)
+            },
 
-        // from int
-        {
-            (e, c) => Convert<object>(e),
-            (e, c) => ToString<int>(e),
-            (e, c) => GreaterThanZero<int>(e),
-            (e, c) => e,
-            (e, c) => Convert<double>(e),
-            (e, c) => ToLambda<object>(e, c),
-            (e, c) => Expression.Constant(e)
-        },
+            // from int
+            {
+                (e, c) => Convert<object>(e),
+                (e, c) => ToString<int>(e),
+                (e, c) => GreaterThanZero<int>(e),
+                (e, c) => e,
+                (e, c) => Convert<double>(e),
+                (e, c) => ToLambda<object>(e, c),
+                (e, c) => Expression.Constant(e)
+            },
 
-        // from double
-        {
-            (e, c) => Convert<object>(e),
-            (e, c) => ToString<double>(e),
-            (e, c) => GreaterThanZero<double>(e),
-            (e, c) => Convert<int>(e),
-            (e, c) => e,
-            (e, c) => ToLambda<object>(e, c),
-            (e, c) => Expression.Constant(e)
-        },
+            // from double
+            {
+                (e, c) => Convert<object>(e),
+                (e, c) => ToString<double>(e),
+                (e, c) => GreaterThanZero<double>(e),
+                (e, c) => Convert<int>(e),
+                (e, c) => e,
+                (e, c) => ToLambda<object>(e, c),
+                (e, c) => Expression.Constant(e)
+            },
 
-        {
-            (e, c) => null,
-            (e, c) => null,
-            (e, c) => null,
-            (e, c) => null,
-            (e, c) => null,
-            (e, c) => null,
-            (e, c) => Expression.Constant(e)
-        }
-    };
+            {
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => Expression.Constant(e)
+            }
+        };
 
     private static Expression Parse<T>(Expression e) =>
         Expression.Call(typeof(T), "Parse", null, e, Expression.Constant(CultureInfo.InvariantCulture));
 
     private static Expression Convert<T>(Expression e) => Expression.Convert(e, typeof(T));
+
+    private static Expression Convert2<T>(Expression e)
+    {
+        var genericMethod = typeof(TypeConversionHelper)
+            .GetMethod(nameof(_), BindingFlags.Static | BindingFlags.NonPublic)!;
+        var method = genericMethod.MakeGenericMethod(e.Type, typeof(T));
+        return Expression.Call(null, method, e);
+    }
+        
+    private static T2 _<T1, T2>(T1 val)
+    {
+        var v = System.Convert.ChangeType(val, typeof(T2));
+        return (T2)v;
+    }
 
     private static Expression TypeAs<T>(Expression e) => Expression.TypeAs(e, typeof(T));
 
