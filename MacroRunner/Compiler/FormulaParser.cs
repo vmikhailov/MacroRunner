@@ -73,7 +73,7 @@ public class FormulaParser : IParserContext
 
     private Parser<Expression> Function =>
         from name in Identifier
-        from lparen in Parse.Char('(')
+        from lparen in Parse.Char('(').Named(name)
         from expr in Parse.Ref(() => LogicalExpression).DelimitedBy(Parse.Char(_settings.ParametersDelimiter).Token())
         from rparen in Parse.Char(')')
         select MakeFunctionCall(name, expr.ToArray());
@@ -175,15 +175,10 @@ public class FormulaParser : IParserContext
         var prop = typeof(ExcelFormulaConstants).GetPublicStaticProperty(name);
         if (prop == null)
         {
-            //if (!Parameters.TryGetValue(name, out var exp))
-            //{
-            var exp = Expression.Call(ExecutionContextParameter, "GetNamedValue", null, Expression.Constant(name));
-                //exp = Expression.(typeof(object), "x");
-                //Parameters[name] = exp;
-            //}
-
-            return exp;
-            //throw new ParseException(string.Format("Variable or constant '{0}' does not exist.", name));
+            return Expression.Call(
+                ExecutionContextParameter, 
+                nameof(IExecutionContext.GetNamedValue), 
+                null, Expression.Constant(name));
         }
 
         return Expression.Constant(prop.GetValue(null));

@@ -67,7 +67,8 @@ public class TypeConversionHelper
         typeof(bool),
         typeof(int),
         typeof(double),
-        typeof(Func<IExecutionContext, object>)
+        typeof(Func<IExecutionContext, object>),
+        typeof(Expression)
     };
 
     private static Func<Expression, IParserContext, Expression?>[,] TypeConversionMap = 
@@ -80,7 +81,8 @@ public class TypeConversionHelper
             (e, c) => Convert<bool>(e),
             (e, c) => Convert<int>(e),
             (e, c) => Convert<double>(e),
-            (e, c) => ToLambda<object>(e, c)
+            (e, c) => ToLambda<object>(e, c),
+            (e, c) => Expression.Constant(e)
         },
 
         //from string
@@ -90,7 +92,8 @@ public class TypeConversionHelper
             (e, c) => Parse<bool>(e),
             (e, c) => Parse<int>(e),
             (e, c) => Parse<double>(e),
-            (e, c) => ToLambda<object>(e, c)
+            (e, c) => ToLambda<object>(e, c),
+            (e, c) => Expression.Constant(e)
         },
 
         // from bool
@@ -100,7 +103,8 @@ public class TypeConversionHelper
             (e, c) => e,
             (e, c) => Convert<int>(e),
             (e, c) => Convert<double>(e),
-            (e, c) => ToLambda<object>(e, c)
+            (e, c) => ToLambda<object>(e, c),
+            (e, c) => Expression.Constant(e)
         },
 
         // from int
@@ -110,7 +114,8 @@ public class TypeConversionHelper
             (e, c) => GreaterThanZero<int>(e),
             (e, c) => e,
             (e, c) => Convert<double>(e),
-            (e, c) => ToLambda<object>(e, c)
+            (e, c) => ToLambda<object>(e, c),
+            (e, c) => Expression.Constant(e)
         },
 
         // from double
@@ -120,7 +125,8 @@ public class TypeConversionHelper
             (e, c) => GreaterThanZero<double>(e),
             (e, c) => Convert<int>(e),
             (e, c) => e,
-            (e, c) => ToLambda<object>(e, c)
+            (e, c) => ToLambda<object>(e, c),
+            (e, c) => Expression.Constant(e)
         },
 
         {
@@ -129,7 +135,8 @@ public class TypeConversionHelper
             (e, c) => null,
             (e, c) => null,
             (e, c) => null,
-            (e, c) => null
+            (e, c) => null,
+            (e, c) => Expression.Constant(e)
         }
     };
 
@@ -146,22 +153,11 @@ public class TypeConversionHelper
 
     private static Expression ToLambda<T>(Expression e, IParserContext context)
     {
-        var p1 = Expression.Parameter(typeof(int), "a");
-
-        var l1 = Expression.Lambda<Func<int, int>>(Expression.Add(p1, Expression.Constant(1)), p1);
-        var l2 = Expression.Lambda<Func<int, int>>(Expression.Add(p1, Expression.Constant(2)), p1);
-
-        var f1 = l1.Compile();
-        var f2 = l2.Compile();
-        var v1 = f1(1);
-        var v2 = f2(2);
-        
-        
         var body = Expression.Convert(e, typeof(object));
         var lambda = Expression.Lambda<Func<IExecutionContext, object>>(body, context.ExecutionContextParameter);
-        //return lambda;
-        var func = lambda.Compile();
-        return Expression.Constant(func);
+        return lambda;
+        //var func = lambda.Compile();
+        //return Expression.Constant(func);
     }
 
     private static IDictionary<ExpressionType, Type> MinimumTypeForOperation = new Dictionary<ExpressionType, Type>()
