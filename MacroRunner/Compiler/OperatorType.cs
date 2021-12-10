@@ -14,5 +14,5 @@ public enum OperatorType
     Equal,
     NotEqual,
     Power,
-    StringConcat
+    Concat
 }

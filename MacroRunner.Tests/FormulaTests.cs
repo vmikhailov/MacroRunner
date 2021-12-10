@@ -79,6 +79,7 @@ public class FormulaTests
     [InlineData("let(x, let(y,1,y+1), x*2)", 4)]
     [InlineData("let(x, 1, let(y,2,x+y)+x)", 4)]
     [InlineData("let(x, 1, let(x,2,x)+x)", 3)]
+    [InlineData("1 + let(x, 2, x + 3)", 6)]
     public void ShouldComputeLetInt(string exp, int result) => RunTest(exp, result);
 
     [Theory]

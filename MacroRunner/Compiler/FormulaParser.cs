@@ -68,7 +68,7 @@ public class FormulaParser : IParserContext
     private static Parser<OperatorType> LessThanOrEqual = Operator("<=", OperatorType.LessThanOrEqual);
     private static Parser<OperatorType> Equal = Operator("=", OperatorType.Equal);
     private static Parser<OperatorType> NotEqual = Operator("<>", OperatorType.NotEqual);
-    private static Parser<OperatorType> Concatenate = Operator("&", OperatorType.StringConcat);
+    private static Parser<OperatorType> Concatenate = Operator("&", OperatorType.Concat);
 
     private Parser<Expression> Function =>
         from name in Identifier
@@ -136,7 +136,8 @@ public class FormulaParser : IParserContext
     {
         if (typeof(T) != body.Type)
         {
-            body = TypeConversionHelper.GetTypeConversion(this, body.Type, typeof(T), body)!;
+            body = TypeConversionHelper.GetTypeConversion(this, body.Type, typeof(T), body) ??
+                   Expression.Convert(body, typeof(T));
         }
 
         return Expression.Lambda<Func<IExecutionContext, T>>(body, ExecutionContextParameter);
@@ -160,16 +161,13 @@ public class FormulaParser : IParserContext
     {
         if (OperatorToExpressionMap.TryGetValue(operatorType, out var exp))
         {
-            var (leftArg, rightArg) = TypeConversionHelper.FindMinimalMatchingType(this, left, right, exp.type);
-            return exp.factory(leftArg, rightArg);
+            if (TypeConversionHelper.FindMinimalMatchingType(this, exp.type, ref left, ref right))
+            {
+                return exp.factory(left, right);
+            }
         }
 
-        if (OperatorToFunctionMap.TryGetValue(operatorType, out var name))
-        {
-            return MakeFunctionCall(name, left, right);
-        }
-
-        throw new ParseException($"Unknown operator {operatorType}");
+        return MakeOperatorCall(operatorType.ToString(), left, right);
     }
 
     private Expression MakeVariableAccess(string name)
@@ -184,6 +182,8 @@ public class FormulaParser : IParserContext
         return Expression.Constant(prop.GetValue(null));
     }
 
+    private Expression MakeOperatorCall(string name, params Expression[] args) => MakeCall(typeof(ExcelFormulaOperators), name, args);
+    
     private Expression MakeFunctionCall(string name, params Expression[] args) => MakeCall(typeof(ExcelFormulaFunctions), name, args);
 
     private Expression MakeCall(Type impl, string name, params Expression[] args)
@@ -258,9 +258,4 @@ public class FormulaParser : IParserContext
             { OperatorType.Equal, (ExpressionType.Equal, (l, r) => Expression.Equal(l, r)) },
             { OperatorType.NotEqual, (ExpressionType.NotEqual, (l, r) => Expression.NotEqual(l, r)) },
         };
-
-    private static IDictionary<OperatorType, string> OperatorToFunctionMap = new Dictionary<OperatorType, string>()
-    {
-        { OperatorType.StringConcat, "Concat" },
-    };
 }

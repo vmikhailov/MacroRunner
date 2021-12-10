@@ -10,11 +10,11 @@ namespace MacroRunner.Helpers;
 
 public class TypeConversionHelper
 {
-    public static (Expression left, Expression right) FindMinimalMatchingType(
+    public static bool FindMinimalMatchingType(
         IParserContext context,
-        Expression left,
-        Expression right,
-        ExpressionType op)
+        ExpressionType op,
+        ref Expression left,
+        ref Expression right)
     {
         var leftTypeId = FindTypeId(left.Type);
         var rightTypeId = FindTypeId(right.Type);
@@ -30,10 +30,13 @@ public class TypeConversionHelper
         var rightExp = GetTypeConversion(context, rightTypeId, typeId, right);
         if (leftExp == null || rightExp == null)
         {
-            throw new($"Unable to find conversion between {left.Type} and {right.Type}");
+            return false;
+            //throw new($"Unable to find conversion between {left.Type} and {right.Type}");
         }
 
-        return (leftExp, rightExp);
+        left = leftExp;
+        right = rightExp;
+        return true;
     }
 
     public static Expression? GetTypeConversion(IParserContext context, Type sourceType, Type targetType, Expression exp)
@@ -77,10 +80,10 @@ public class TypeConversionHelper
             // from object
             {
                 (e, c) => e,
-                (e, c) => ToString<object>(e),
-                (e, c) => Convert<bool>(e),
-                (e, c) => Convert<int>(e),
-                (e, c) => Convert2<double>(e),
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => null,
+                (e, c) => null,
                 (e, c) => ToLambda<object>(e, c),
                 (e, c) => Expression.Constant(e)
             },
